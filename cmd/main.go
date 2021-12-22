@@ -33,7 +33,9 @@ func newCommand() *cobra.Command {
 		},
 	}
 
-	cmd.AddCommand(command.NewVerifyPreflights())
+	cmd.AddCommand(command.NewVerify())
+	//cmd.AddCommand(command.NewDeploy())
+	//cmd.AddCommand(command.NewWaitFor())
 
 	return cmd
 }
