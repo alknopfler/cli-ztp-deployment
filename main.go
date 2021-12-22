@@ -7,7 +7,8 @@ import (
 
 	"github.com/spf13/cobra"
 
-	command "github.com/alknopfler/cli-ztp-deployment/pkg/cmd"
+	"github.com/alknopfler/cli-ztp-deployment/cmd"
+	"github.com/alknopfler/cli-ztp-deployment/config"
 )
 
 func main() {
@@ -24,7 +25,7 @@ func main() {
 }
 
 func newCommand() *cobra.Command {
-	cmd := &cobra.Command{
+	c := &cobra.Command{
 		Use:   "ztpcli",
 		Short: "Ztp is a command line to deploy ztp openshift clusters",
 		Run: func(cmd *cobra.Command, args []string) {
@@ -32,10 +33,16 @@ func newCommand() *cobra.Command {
 			os.Exit(1)
 		},
 	}
+	
+	err := config.NewConfig()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "%v\n", err)
+		os.Exit(1)
+	}
 
-	cmd.AddCommand(command.NewVerify())
+	c.AddCommand(cmd.NewVerify())
 	//cmd.AddCommand(command.NewDeploy())
 	//cmd.AddCommand(command.NewWaitFor())
 
-	return cmd
+	return c
 }

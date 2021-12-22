@@ -93,14 +93,14 @@ func NewConfig() error {
 //ReadFromConfigFile reads the config file
 func (c *ZTPConfig) ReadFromConfigFile() error {
 	if getEnv("ZTP_CONFIGFILE") == "" {
-		fmt.Errorf("ZTP_CONFIGFILE not set")
+		fmt.Errorf("ZTP_CONFIGFILE not set", "")
 	}
 
 	if getEnv("ZTP_CONFIGFILE") != "" {
-		fmt.Println("ConfigFile env is not empty. Reading file from this env")
+		fmt.Println(">>>> ConfigFile env is not empty. Reading file from this env")
 		ConfigFile = getEnv("ZTP_CONFIGFILE")
 	} else {
-		fmt.Println("ZTP_CONFIGFILE env var is empty. Using default path: " + defaultUserConfigFile)
+		fmt.Println(">>>> ZTP_CONFIGFILE env var is empty. Using default path: " + defaultUserConfigFile)
 		ConfigFile = defaultUserConfigFile
 	}
 
@@ -115,7 +115,7 @@ func (c *ZTPConfig) ReadFromConfigFile() error {
 		return fmt.Errorf("decoding config file %s: %v", ConfigFile, err)
 	}
 	if getEnv("KUBECONFIG") == "" {
-		return fmt.Errorf("Kubeconfig env empty", err)
+		return fmt.Errorf("Kubeconfig env empty", "")
 	}
 	c.Config.KubeconfigHUB = getEnv("KUBECONFIG")
 
