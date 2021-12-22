@@ -1,5 +1,13 @@
 package resources
 
+import (
+	"context"
+
+	"k8s.io/client-go/dynamic"
+	"k8s.io/client-go/kubernetes"
+	ctrl "sigs.k8s.io/controller-runtime"
+)
+
 func GetResourcesDynamically(dynamic dynamic.Interface, ctx context.Context,
 	group string, version string, resource string, namespace string) (
 	[]unstructured.Unstructured, error) {
@@ -65,4 +73,21 @@ func GetResourcesByJq(dynamic dynamic.Interface, ctx context.Context, group stri
 		}
 	}
 	return resources, nil
+}
+
+func prueba() {
+	ctx := context.Background()
+	config := ctrl.GetConfigOrDie()
+	dynamic := dynamic.NewForConfigOrDie(config)
+
+	namespace := "default"
+	items, err := GetResourcesDynamically(dynamic, ctx,
+		"apps", "v1", "deployments", namespace)
+	if err != nil {
+		fmt.Println(err)
+	} else {
+		for _, item := range items {
+			fmt.Printf("%+v\n", item)
+		}
+	}
 }
