@@ -23,9 +23,10 @@ const (
 var (
 	// ConfigFile is the global configuration
 	ConfigFile string
-	Ztp        ZTPConfig
+	Ztp        ZTPConfig //global variable to reference the config
 )
 
+//ZTPConfig is the global configuration data model
 type ZTPConfig struct {
 	Config struct {
 		Clusterimageset  string `yaml:"clusterimageset"`
@@ -84,10 +85,12 @@ type ZTPConfig struct {
 
 //fmt.Println(e.Spokes[0].Name, e.Spokes[0].Master0.NicExtDhcp)
 
+//Constructor new config file from file
 func NewConfig() error {
 	return Ztp.ReadFromConfigFile()
 }
 
+//ReadFromConfigFile reads the config file
 func (c *ZTPConfig) ReadFromConfigFile() error {
 	if getEnv("ZTP_CONFIGFILE") == "" {
 		fmt.Errorf("ZTP_CONFIGFILE not set")
@@ -119,6 +122,7 @@ func (c *ZTPConfig) ReadFromConfigFile() error {
 	return nil
 }
 
+//getEnv returns the value of the environment variable named by the key.
 func getEnv(key string) string {
 	return os.Getenv(key)
 }
