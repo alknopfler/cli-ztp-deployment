@@ -11,18 +11,6 @@ import (
 
 func RunPreflights() error {
 
-	fmt.Println()
-	fmt.Println("Using kubeconfig: ", kubeconfig)
-	config, err := clientcmd.BuildConfigFromFlags("", kubeconfig)
-	if err != nil {
-		panic(err.Error())
-	}
-
-	// create the clientset
-	clientset, err := kubernetes.NewForConfig(config)
-	if err != nil {
-		log.Fatal(err)
-	}
 	api := clientset.CoreV1()
 
 	ctx, cancel := context.WithCancel(context.Background())
