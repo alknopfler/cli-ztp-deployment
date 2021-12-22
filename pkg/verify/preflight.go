@@ -5,32 +5,22 @@ import (
 	"fmt"
 	"log"
 
+	"github.com/alknopfler/cli-ztp-deployment/config"
+	"github.com/alknopfler/cli-ztp-deployment/pkg/auth"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
 )
 
 func RunPreflights() error {
 
-	fmt.Println()
-	fmt.Println("Using kubeconfig: ", kubeconfig)
-	config, err := clientcmd.BuildConfigFromFlags("", kubeconfig)
-	if err != nil {
-		panic(err.Error())
-	}
-
-	// create the clientset
-	clientset, err := kubernetes.NewForConfig(config)
-	if err != nil {
-		log.Fatal(err)
-	}
-	api := clientset.CoreV1()
-
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
 	// initial list
 	listOptions := metav1.ListOptions{LabelSelector: label, FieldSelector: field}
-	pvcs, err := api.PersistentVolumeClaims(ns).List(ctx, listOptions)
+	client := auth.DynamicWithAuth(config.Ztp.Config.KubeconfigHUB)
+	pvcs, err := client.
 	if err != nil {
 		log.Fatal(err)
 	}

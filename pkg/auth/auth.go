@@ -9,7 +9,7 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 )
 
-func withAuth(kubeconfig string) *kubernetes.Clientset {
+func WithAuth(kubeconfig string) *kubernetes.Clientset {
 	fmt.Println("Using kubeconfig: ", kubeconfig)
 	config, err := clientcmd.BuildConfigFromFlags("", kubeconfig)
 	if err != nil {
@@ -26,7 +26,7 @@ func withAuth(kubeconfig string) *kubernetes.Clientset {
 	return clientset
 }
 
-func dynamicWithAuth(kubeconfig string) *dynamic.Interface {
+func DynamicWithAuth(kubeconfig string) *dynamic.Interface {
 
 	config, err := clientcmd.BuildConfigFromFlags("", kubeconfig)
 	if err != nil {
