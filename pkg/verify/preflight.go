@@ -30,7 +30,7 @@ func RunPreflights() error {
 
 	// initial list
 	listOptions := metav1.ListOptions{LabelSelector: label, FieldSelector: field}
-	pvcs, err := api.PersistentVolumeClaims(ns).List(ctx, listOptions)
+	pvcs, err := api.PersistentVolumes(ns).List(ctx, listOptions)
 	if err != nil {
 		log.Fatal(err)
 	}
