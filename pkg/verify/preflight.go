@@ -7,7 +7,7 @@ import (
 
 	"github.com/alknopfler/cli-ztp-deployment/config"
 	"github.com/alknopfler/cli-ztp-deployment/pkg/auth"
-	"github.com/alknopfler/cli-ztp-deployment/pkg/resources"
+	resource "github.com/alknopfler/cli-ztp-deployment/pkg/resources"
 )
 
 func RunPreflights() error {
@@ -16,7 +16,8 @@ func RunPreflights() error {
 	defer cancel()
 
 	c := auth.SetWithDynamic(config.Ztp.Config.KubeconfigHUB)
-	pvcs, err := resources.GetResourcesDynamically(c)
+	pvcs, err := resource.GetResourcesDynamically(c, ctx)
+
 	if err != nil {
 		log.Fatal(err)
 	}
