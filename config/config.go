@@ -12,30 +12,29 @@ import (
 Environment variables:
 - ZTP_CONFIGFILE
 - KUBECONFIG
-
-
 */
-
-const (
-	defaultUserConfigFile = "./config.yaml"
-)
 
 var (
 	// ConfigFile is the global configuration
-	ConfigFile string
-	Ztp        ZTPConfig //global variable to reference the config
+	Ztp ZTPConfig //global variable to reference the config
+)
+
+const (
+	DEFAULT_CONFIG_FILE = "./config.yaml"
 )
 
 //ZTPConfig is the global configuration data model
 type ZTPConfig struct {
 	Config struct {
+		ConfigFile       string
 		Clusterimageset  string `yaml:"clusterimageset"`
+		KubeconfigHUB    string
+		KubeframeNS      string
 		OC_OCP_VERSION   string `yaml:"OC_OCP_VERSION"`
 		OC_OCP_TAG       string `yaml:"OC_OCP_TAG"`
 		OC_RHCOS_RELEASE string `yaml:"OC_RHCOS_RELEASE"`
 		OC_ACM_VERSION   string `yaml:"OC_ACM_VERSION"`
 		OC_OCS_VERSION   string `yaml:"OC_OCS_VERSION"`
-		KubeconfigHUB    string
 	} `yaml:"config"`
 	Spokes []struct {
 		Name            string `yaml:"name"`
@@ -86,8 +85,12 @@ type ZTPConfig struct {
 //fmt.Println(e.Spokes[0].Name, e.Spokes[0].Master0.NicExtDhcp)
 
 //Constructor new config file from file
-func NewConfig() error {
-	return Ztp.ReadFromConfigFile()
+func NewConfig() (ZTPConfig, error) {
+	err := Ztp.ReadFromConfigFile()
+	if err != nil {
+		return Ztp, err
+	}
+	return Ztp, nil
 }
 
 //ReadFromConfigFile reads the config file
@@ -98,21 +101,21 @@ func (c *ZTPConfig) ReadFromConfigFile() error {
 
 	if getEnv("ZTP_CONFIGFILE") != "" {
 		fmt.Println(">>>> ConfigFile env is not empty. Reading file from this env")
-		ConfigFile = getEnv("ZTP_CONFIGFILE")
+		c.Config.ConfigFile = getEnv("ZTP_CONFIGFILE")
 	} else {
-		fmt.Println(">>>> ZTP_CONFIGFILE env var is empty. Using default path: " + defaultUserConfigFile)
-		ConfigFile = defaultUserConfigFile
+		fmt.Println(">>>> ZTP_CONFIGFILE env var is empty. Using default path: " + DEFAULT_CONFIG_FILE)
+		c.Config.ConfigFile = DEFAULT_CONFIG_FILE
 	}
 
-	f, err := os.Open(ConfigFile)
+	f, err := os.Open(c.Config.ConfigFile)
 	if err != nil {
-		return fmt.Errorf("opening config file %s: %v", ConfigFile, err)
+		return fmt.Errorf("opening config file %s: %v", c.Config.ConfigFile, err)
 	}
 	defer f.Close()
 
 	decoder := yaml.NewDecoder(f)
 	if err := decoder.Decode(c); err != nil {
-		return fmt.Errorf("decoding config file %s: %v", ConfigFile, err)
+		return fmt.Errorf("decoding config file %s: %v", c.Config.ConfigFile, err)
 	}
 	if getEnv("KUBECONFIG") == "" {
 		return fmt.Errorf("Kubeconfig env empty", "")

@@ -11,6 +11,13 @@ import (
 
 func main() {
 
+	//Load config from file to set globally
+	var err error
+	config.Ztp, err = config.NewConfig()
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	if len(os.Getenv("GOMAXPROCS")) == 0 {
 		runtime.GOMAXPROCS(runtime.NumCPU())
 	}
@@ -29,12 +36,6 @@ func newCommand() *cobra.Command {
 			cmd.Help()
 			os.Exit(1)
 		},
-	}
-
-	//Load config from file to set globally
-	err := config.NewConfig()
-	if err != nil {
-		log.Fatal(err)
 	}
 
 	c.AddCommand(cmd.NewVerify())
