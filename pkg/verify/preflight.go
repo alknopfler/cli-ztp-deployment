@@ -33,7 +33,7 @@ func verifyPVS(clientset kubernetes.Clientset, ctx context.Context) {
 	}
 
 	if len(pvs.Items) < 3 {
-		log.Fatal("Error PV insufficients...Exiting")
+		log.Fatal("[ERROR] PV insufficients...Exiting")
 	}
 	log.Println(">>>> Pvs validated")
 }
@@ -42,11 +42,11 @@ func verifyNodes(clientset kubernetes.Clientset, ctx context.Context) {
 	defer wg.Done()
 	nodes, err := resources.GetNodes(&clientset, ctx)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal("[ERROR] ", err)
 	}
 
 	if len(nodes.Items) < 3 {
-		log.Fatal("Errnodesn insufficients...Exiting")
+		log.Fatal("[ERROR] nodes insufficient...Exiting")
 	}
 	log.Println(">>>> Nodes validated")
 }

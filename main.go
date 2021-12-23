@@ -17,7 +17,7 @@ func main() {
 
 	command := newCommand()
 	if err := command.Execute(); err != nil {
-		log.Fatal(err)
+		log.Fatalf("[ERROR] %e", err)
 	}
 }
 

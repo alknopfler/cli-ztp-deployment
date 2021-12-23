@@ -69,7 +69,7 @@ func GetResourcesByJq(dynamic dynamic.Interface, ctx context.Context, group stri
 			} else {
 				boolResult, ok := result.(bool)
 				if !ok {
-					fmt.Println("Query returned non-boolean value")
+					fmt.Println(">>>> Query returned non-boolean value")
 				} else if boolResult {
 					resources = append(resources, item)
 				}
