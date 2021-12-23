@@ -37,8 +37,8 @@ func newCommand() *cobra.Command {
 	}
 
 	c.AddCommand(cmd.NewVerify())
-	//cmd.AddCommand(command.NewDeploy())
-	//cmd.AddCommand(command.NewWaitFor())
+	c.AddCommand(cmd.NewDeploy())
+	//c.AddCommand(cmd.NewWaitFor())
 
 	return c
 }
