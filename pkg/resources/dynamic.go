@@ -10,17 +10,37 @@ import (
 	"k8s.io/client-go/dynamic"
 )
 
-func GetResourcesDynamically(dynamic dynamic.Interface, ctx context.Context,
-	group string, version string, resource string, namespace string) (
-	[]unstructured.Unstructured, error) {
+type Generic struct {
+	Dyn       dynamic.Interface
+	Ctx       context.Context
+	Group     string
+	Version   string
+	Kind      string
+	Namespace string
+	Jq        string
+}
+
+func NewGeneric(ctx context.Context, dynamic dynamic.Interface, group, version, kind, namespace, jq string) *Generic {
+	return &Generic{
+		Dyn:       dynamic,
+		Ctx:       ctx,
+		Group:     group,
+		Version:   version,
+		Kind:      kind,
+		Namespace: namespace,
+		Jq:        jq,
+	}
+}
+
+func (g *Generic) GetResourcesDynamically() ([]unstructured.Unstructured, error) {
 
 	resourceId := schema.GroupVersionResource{
-		Group:    group,
-		Version:  version,
-		Resource: resource,
+		Group:    g.Group,
+		Version:  g.Version,
+		Resource: g.Kind,
 	}
-	list, err := dynamic.Resource(resourceId).Namespace(namespace).
-		List(ctx, metav1.ListOptions{})
+	list, err := g.Dyn.Resource(resourceId).Namespace(g.Namespace).
+		List(g.Ctx, metav1.ListOptions{})
 
 	if err != nil {
 		return nil, err
@@ -29,18 +49,16 @@ func GetResourcesDynamically(dynamic dynamic.Interface, ctx context.Context,
 	return list.Items, nil
 }
 
-func GetResourcesByJq(dynamic dynamic.Interface, ctx context.Context, group string,
-	version string, resource string, namespace string, jq string) (
-	[]unstructured.Unstructured, error) {
+func (g *Generic) GetResourcesByJq() ([]unstructured.Unstructured, error) {
 
 	resources := make([]unstructured.Unstructured, 0)
 
-	query, err := gojq.Parse(jq)
+	query, err := gojq.Parse(g.Jq)
 	if err != nil {
 		return nil, err
 	}
 
-	items, err := GetResourcesDynamically(dynamic, ctx, group, version, resource, namespace)
+	items, err := g.GetResourcesDynamically()
 	if err != nil {
 		return nil, err
 	}

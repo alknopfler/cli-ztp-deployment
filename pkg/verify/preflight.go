@@ -41,7 +41,7 @@ func (p *Preflight) RunPreflights() error {
 
 func (p *Preflight) verifyPVS(clientset kubernetes.Clientset, ctx context.Context) {
 	defer wg.Done()
-	pvs, err := resources.GetPVS(&clientset, ctx)
+	pvs, err := resources.NewCore(ctx, &clientset).GetPVS()
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -54,7 +54,7 @@ func (p *Preflight) verifyPVS(clientset kubernetes.Clientset, ctx context.Contex
 
 func (p *Preflight) verifyNodes(clientset kubernetes.Clientset, ctx context.Context) {
 	defer wg.Done()
-	nodes, err := resources.GetNodes(&clientset, ctx)
+	nodes, err := resources.NewCore(ctx, &clientset).GetNodes()
 	if err != nil {
 		log.Fatal("[ERROR] ", err)
 	}
@@ -67,7 +67,7 @@ func (p *Preflight) verifyNodes(clientset kubernetes.Clientset, ctx context.Cont
 
 func (p *Preflight) verifyClusterOperators(client dynamic.Interface, ctx context.Context) {
 	defer wg.Done()
-	co, err := resources.GetResourcesByJq(client, ctx, CLUSTER_OPERATOR_GROUP, CLUSTER_OPERATOR_VERSION, CLUSTER_OPERATOR_RESOURCE, "", CONDITION_CO_READY)
+	co, err := resources.NewGeneric(ctx, client, CLUSTER_OPERATOR_GROUP, CLUSTER_OPERATOR_VERSION, CLUSTER_OPERATOR_RESOURCE, "", CONDITION_CO_READY).GetResourcesByJq()
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -80,7 +80,7 @@ func (p *Preflight) verifyClusterOperators(client dynamic.Interface, ctx context
 
 func (p *Preflight) verifyMetal3Pods(client kubernetes.Clientset, ctx context.Context) {
 	defer wg.Done()
-	metal, err := resources.GetPods(&client, ctx, METAL3_NAMESPACE)
+	metal, err := resources.NewCoreWithParam(ctx, &client, METAL3_NAMESPACE, "").GetPods()
 	if err != nil {
 		log.Fatal(err)
 	}
