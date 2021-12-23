@@ -1,9 +1,8 @@
-module cli-ztp-deployment
+module github.com/alknopfler/cli-ztp-deployment
 
 go 1.17
 
 require (
-	github.com/alknopfler/cli-ztp-deployment v0.0.0-20211222222653-6def49c6c883
 	github.com/itchyny/gojq v0.12.6
 	github.com/spf13/cobra v1.3.0
 	gopkg.in/yaml.v2 v2.4.0

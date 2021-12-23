@@ -1,14 +1,12 @@
 package main
 
 import (
-	"fmt"
-	"os"
-	"runtime"
-
-	"github.com/spf13/cobra"
-
 	"github.com/alknopfler/cli-ztp-deployment/cmd"
 	"github.com/alknopfler/cli-ztp-deployment/config"
+	"github.com/spf13/cobra"
+	"log"
+	"os"
+	"runtime"
 )
 
 func main() {
@@ -19,8 +17,7 @@ func main() {
 
 	command := newCommand()
 	if err := command.Execute(); err != nil {
-		fmt.Fprintf(os.Stderr, "%v\n", err)
-		os.Exit(1)
+		log.Fatal(err)
 	}
 }
 
@@ -33,11 +30,10 @@ func newCommand() *cobra.Command {
 			os.Exit(1)
 		},
 	}
-	
+
 	err := config.NewConfig()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "%v\n", err)
-		os.Exit(1)
+		log.Fatal(err)
 	}
 
 	c.AddCommand(cmd.NewVerify())

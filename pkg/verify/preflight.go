@@ -1,13 +1,11 @@
 package verify
 
 import (
-	"cli-ztp-deployment/pkg/resources"
 	"context"
-	"fmt"
-	"log"
-
 	"github.com/alknopfler/cli-ztp-deployment/config"
 	"github.com/alknopfler/cli-ztp-deployment/pkg/auth"
+	"github.com/alknopfler/cli-ztp-deployment/pkg/resources"
+	"log"
 )
 
 func RunPreflights() error {
@@ -16,11 +14,15 @@ func RunPreflights() error {
 	defer cancel()
 
 	c := auth.Set(config.Ztp.Config.KubeconfigHUB)
+
 	pvs, err := resources.GetPVS(c, ctx)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	fmt.Println(pvs)
+	if len(pvs.Items) < 3 {
+		log.Fatal("Error PV insufficients...Exiting", err)
+	}
+	log.Println("Pvs validated")
 	return nil
 }
