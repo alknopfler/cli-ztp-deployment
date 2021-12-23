@@ -20,10 +20,11 @@ func RunPreflights() error {
 	client := auth.Set(config.Ztp.Config.KubeconfigHUB)
 	dynamicClient := auth.SetWithDynamic(config.Ztp.Config.KubeconfigHUB)
 
-	wg.Add(3)
+	wg.Add(4)
 	go verifyNodes(*client, ctx)
 	go verifyPVS(*client, ctx)
 	go verifyClusterOperators(dynamicClient, ctx)
+	go verifyMetal3Pods(*client, ctx)
 	wg.Wait()
 	return nil
 }
@@ -65,4 +66,17 @@ func verifyClusterOperators(client dynamic.Interface, ctx context.Context) {
 		log.Fatal("[ERROR] Cluster operators are not available...Exiting")
 	}
 	log.Println(">>>> co validated")
+}
+
+func verifyMetal3Pods(client kubernetes.Clientset, ctx context.Context) {
+	defer wg.Done()
+	metal, err := resources.GetPods(&client, ctx, "openshift-machine-api")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	if len(metal) < 1 {
+		log.Fatal("[ERROR] Metal3 pods insufficient...Exiting")
+	}
+	log.Println(">>>> Metal3 pods validated")
 }
