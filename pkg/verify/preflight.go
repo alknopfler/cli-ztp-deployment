@@ -11,6 +11,14 @@ import (
 	"sync"
 )
 
+const (
+	CLUSTER_OPERATOR_GROUP    = "config.openshift.io"
+	CLUSTER_OPERATOR_VERSION  = "v1"
+	CLUSTER_OPERATOR_RESOURCE = "clusteroperators"
+	CONDITION_CO_READY        = ".status.conditions[] | select (.type == \"Available\" and .status == \"False\")"
+	METAL3_NAMESPACE          = "openshift-machine-api"
+)
+
 var wg sync.WaitGroup
 
 func RunPreflights() error {
@@ -57,7 +65,7 @@ func verifyNodes(clientset kubernetes.Clientset, ctx context.Context) {
 
 func verifyClusterOperators(client dynamic.Interface, ctx context.Context) {
 	defer wg.Done()
-	co, err := resources.GetResourcesByJq(client, ctx, "config.openshift.io", "v1", "clusteroperators", "", ".status.conditions[] | select (.type == \"Available\" and .status == \"False\")")
+	co, err := resources.GetResourcesByJq(client, ctx, CLUSTER_OPERATOR_GROUP, CLUSTER_OPERATOR_VERSION, CLUSTER_OPERATOR_RESOURCE, "", CONDITION_CO_READY)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -70,7 +78,7 @@ func verifyClusterOperators(client dynamic.Interface, ctx context.Context) {
 
 func verifyMetal3Pods(client kubernetes.Clientset, ctx context.Context) {
 	defer wg.Done()
-	metal, err := resources.GetPods(&client, ctx, "openshift-machine-api")
+	metal, err := resources.GetPods(&client, ctx, METAL3_NAMESPACE)
 	if err != nil {
 		log.Fatal(err)
 	}
