@@ -31,6 +31,7 @@ func newCommand() *cobra.Command {
 		},
 	}
 
+	//Load config from file to set globally
 	err := config.NewConfig()
 	if err != nil {
 		log.Fatal(err)

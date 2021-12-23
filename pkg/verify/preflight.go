@@ -19,25 +19,27 @@ const (
 	METAL3_NAMESPACE          = "openshift-machine-api"
 )
 
+type Preflight struct{}
+
 var wg sync.WaitGroup
 
-func RunPreflights() error {
-
+func (p *Preflight) RunPreflights() error {
+	log.Println(">>>> Running preflights")
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	client := auth.Set(config.Ztp.Config.KubeconfigHUB)
-	dynamicClient := auth.SetWithDynamic(config.Ztp.Config.KubeconfigHUB)
+	client := auth.NewZTPAuth(config.Ztp.Config.KubeconfigHUB).Set()
+	dynamicClient := auth.NewZTPAuth(config.Ztp.Config.KubeconfigHUB).SetWithDynamic()
 
 	wg.Add(4)
-	go verifyNodes(*client, ctx)
-	go verifyPVS(*client, ctx)
-	go verifyClusterOperators(dynamicClient, ctx)
-	go verifyMetal3Pods(*client, ctx)
+	go p.verifyNodes(*client, ctx)
+	go p.verifyPVS(*client, ctx)
+	go p.verifyClusterOperators(dynamicClient, ctx)
+	go p.verifyMetal3Pods(*client, ctx)
 	wg.Wait()
 	return nil
 }
 
-func verifyPVS(clientset kubernetes.Clientset, ctx context.Context) {
+func (p *Preflight) verifyPVS(clientset kubernetes.Clientset, ctx context.Context) {
 	defer wg.Done()
 	pvs, err := resources.GetPVS(&clientset, ctx)
 	if err != nil {
@@ -50,7 +52,7 @@ func verifyPVS(clientset kubernetes.Clientset, ctx context.Context) {
 	log.Println(">>>> Pvs validated")
 }
 
-func verifyNodes(clientset kubernetes.Clientset, ctx context.Context) {
+func (p *Preflight) verifyNodes(clientset kubernetes.Clientset, ctx context.Context) {
 	defer wg.Done()
 	nodes, err := resources.GetNodes(&clientset, ctx)
 	if err != nil {
@@ -63,7 +65,7 @@ func verifyNodes(clientset kubernetes.Clientset, ctx context.Context) {
 	log.Println(">>>> Nodes validated")
 }
 
-func verifyClusterOperators(client dynamic.Interface, ctx context.Context) {
+func (p *Preflight) verifyClusterOperators(client dynamic.Interface, ctx context.Context) {
 	defer wg.Done()
 	co, err := resources.GetResourcesByJq(client, ctx, CLUSTER_OPERATOR_GROUP, CLUSTER_OPERATOR_VERSION, CLUSTER_OPERATOR_RESOURCE, "", CONDITION_CO_READY)
 	if err != nil {
@@ -76,7 +78,7 @@ func verifyClusterOperators(client dynamic.Interface, ctx context.Context) {
 	log.Println(">>>> co validated")
 }
 
-func verifyMetal3Pods(client kubernetes.Clientset, ctx context.Context) {
+func (p *Preflight) verifyMetal3Pods(client kubernetes.Clientset, ctx context.Context) {
 	defer wg.Done()
 	metal, err := resources.GetPods(&client, ctx, METAL3_NAMESPACE)
 	if err != nil {

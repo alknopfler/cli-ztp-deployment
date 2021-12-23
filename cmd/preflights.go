@@ -11,9 +11,9 @@ func NewPreflights() *cobra.Command {
 		Use:   "preflights",
 		Short: "Run Preflight checks to validate the future deployments",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return verify.RunPreflights()
+			var p verify.Preflight
+			return p.RunPreflights()
 		},
 	}
-
 	return cmd
 }

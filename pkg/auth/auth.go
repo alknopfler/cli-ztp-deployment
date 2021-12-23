@@ -8,9 +8,19 @@ import (
 	"log"
 )
 
-func Set(kubeconfig string) *kubernetes.Clientset {
-	fmt.Println(">>>> Using kubeconfig: ", kubeconfig)
-	config, err := clientcmd.BuildConfigFromFlags("", kubeconfig)
+type ZTPAuth struct {
+	KubeConfig string
+}
+
+func NewZTPAuth(kubeconfig string) *ZTPAuth {
+	return &ZTPAuth{
+		KubeConfig: kubeconfig,
+	}
+}
+
+func (z *ZTPAuth) Set() *kubernetes.Clientset {
+	fmt.Println(">>>> Using kubeconfig: ", z.KubeConfig)
+	config, err := clientcmd.BuildConfigFromFlags("", z.KubeConfig)
 	if err != nil {
 		log.Fatalf("[ERROR] error reading kubeconfig to get clientset: %e", err)
 	}
@@ -23,9 +33,9 @@ func Set(kubeconfig string) *kubernetes.Clientset {
 	return clientset
 }
 
-func SetWithDynamic(kubeconfig string) dynamic.Interface {
+func (z *ZTPAuth) SetWithDynamic() dynamic.Interface {
 
-	config, err := clientcmd.BuildConfigFromFlags("", kubeconfig)
+	config, err := clientcmd.BuildConfigFromFlags("", z.KubeConfig)
 	if err != nil {
 		log.Fatalf("[ERROR] error reading kubeconfig to get clientset: %e", err)
 
