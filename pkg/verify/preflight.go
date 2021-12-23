@@ -2,7 +2,6 @@ package verify
 
 import (
 	"context"
-	"fmt"
 	"github.com/alknopfler/cli-ztp-deployment/config"
 	"github.com/alknopfler/cli-ztp-deployment/pkg/auth"
 	"github.com/alknopfler/cli-ztp-deployment/pkg/resources"
@@ -57,11 +56,13 @@ func verifyNodes(clientset kubernetes.Clientset, ctx context.Context) {
 
 func verifyClusterOperators(client dynamic.Interface, ctx context.Context) {
 	defer wg.Done()
-	co, err := resources.GetResourcesDynamically(client, ctx, "config.openshift.io", "v1", "clusteroperators", "")
+	co, err := resources.GetResourcesByJq(client, ctx, "config.openshift.io", "v1", "clusteroperators", "", ".status.conditions[] | select (.type == \"Available\" and .status == \"False\")")
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	fmt.Println(len(co))
+	if len(co) > 0 {
+		log.Fatal("[ERROR] Cluster operators are not available...Exiting")
+	}
 	log.Println(">>>> co validated")
 }

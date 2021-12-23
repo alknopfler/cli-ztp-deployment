@@ -2,8 +2,6 @@ package resources
 
 import (
 	"context"
-	"fmt"
-
 	"github.com/itchyny/gojq"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -56,6 +54,7 @@ func GetResourcesByJq(dynamic dynamic.Interface, ctx context.Context, group stri
 		}
 
 		// Evaluate jq against JSON
+
 		iter := query.Run(rawJson)
 		for {
 			result, ok := iter.Next()
@@ -67,14 +66,10 @@ func GetResourcesByJq(dynamic dynamic.Interface, ctx context.Context, group stri
 					return nil, err
 				}
 			} else {
-				boolResult, ok := result.(bool)
-				if !ok {
-					fmt.Println(">>>> Query returned non-boolean value")
-				} else if boolResult {
-					resources = append(resources, item)
-				}
+				resources = append(resources, item)
 			}
 		}
+
 	}
 	return resources, nil
 }
