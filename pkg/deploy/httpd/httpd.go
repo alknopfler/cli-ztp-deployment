@@ -6,6 +6,7 @@ import (
 	"github.com/alknopfler/cli-ztp-deployment/config"
 	"github.com/alknopfler/cli-ztp-deployment/pkg/auth"
 	"github.com/alknopfler/cli-ztp-deployment/pkg/resources"
+	"k8s.io/client-go/dynamic"
 	"log"
 	"sync"
 )
@@ -46,18 +47,24 @@ func NewFileServer(mountPath, size, domain string, port int, targetPort int) *Fi
 }
 
 func NewFileServerDefault() *FileServer {
-
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	client := auth.NewZTPAuth(config.Ztp.Config.KubeconfigHUB).SetWithDynamic()
 	return &FileServer{
 		mountPath:  DEFAULT_MOUNT_PATH,
 		size:       DEFAULT_SIZE,
-		domain:     getDomainFromCluster(),
+		domain:     getDomainFromCluster(client, ctx),
 		port:       DEFAULT_PORT,
 		targetPort: DEFAULT_TARGETPORT,
 	}
 }
 
 func RunHttpd() error {
-	getDomainFromCluster()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	client := auth.NewZTPAuth(config.Ztp.Config.KubeconfigHUB).SetWithDynamic()
+
+	getDomainFromCluster(client, ctx)
 	return nil
 }
 
@@ -81,14 +88,9 @@ func createPVC() error {
 	return nil
 }
 
-func getDomainFromCluster() string {
+func getDomainFromCluster(client dynamic.Interface, ctx context.Context) string {
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	dynamicClient := auth.NewZTPAuth(config.Ztp.Config.KubeconfigHUB).SetWithDynamic()
-	domain, err := resources.NewGenericGet(ctx, dynamicClient, INGRESS_CONTROLLER_GROUP, INGRESS_CONTROLLER_VERSION, INGRESS_CONTROLLER_KIND, INGRESS_CONTROLLER_NS, INGRESS_CONTROLLER_NAME, INGRESS_CONTROLLER_JQPATH).
-		GetResourceByJq()
-
+	domain, err := resources.NewGenericList(ctx, client, INGRESS_CONTROLLER_GROUP, INGRESS_CONTROLLER_VERSION, INGRESS_CONTROLLER_VERSION, INGRESS_CONTROLLER_NS, ".").GetResourcesDynamically()
 	if err != nil {
 		log.Fatal(err)
 	}

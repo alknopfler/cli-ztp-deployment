@@ -35,16 +35,9 @@ func NewGenericList(ctx context.Context, dynamic dynamic.Interface, group, versi
 }
 
 func NewGenericGet(ctx context.Context, dynamic dynamic.Interface, group, version, kind, namespace, name, jq string) *Generic {
-	return &Generic{
-		Dyn:       dynamic,
-		Ctx:       ctx,
-		Group:     group,
-		Version:   version,
-		Kind:      kind,
-		Namespace: namespace,
-		Name:      name,
-		Jq:        jq,
-	}
+	g := NewGenericList(ctx, dynamic, group, version, kind, namespace, jq)
+	g.Name = name
+	return g
 }
 
 func (g *Generic) GetResourcesDynamically() ([]unstructured.Unstructured, error) {
