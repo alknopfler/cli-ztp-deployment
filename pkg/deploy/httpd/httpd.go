@@ -2,7 +2,8 @@ package httpd
 
 import (
 	"context"
-	"fmt"
+	"encoding/json"
+	jsonvalue "github.com/Andrew-M-C/go.jsonvalue"
 	"github.com/alknopfler/cli-ztp-deployment/config"
 	"github.com/alknopfler/cli-ztp-deployment/pkg/auth"
 	"github.com/alknopfler/cli-ztp-deployment/pkg/resources"
@@ -18,7 +19,7 @@ const (
 	DEFAULT_TARGETPORT         = 8080
 	INGRESS_CONTROLLER_GROUP   = "operator.openshift.io"
 	INGRESS_CONTROLLER_VERSION = "v1"
-	INGRESS_CONTROLLER_KIND    = "IngressController"
+	INGRESS_CONTROLLER_KIND    = "ingresscontrollers"
 	INGRESS_CONTROLLER_JQPATH  = ".status.domain"
 	INGRESS_CONTROLLER_NS      = "openshift-ingress-operator"
 	INGRESS_CONTROLLER_NAME    = "default"
@@ -59,7 +60,7 @@ func NewFileServerDefault() *FileServer {
 	}
 }
 
-func RunHttpd() error {
+func (f *FileServer) RunHttpd() error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	client := auth.NewZTPAuth(config.Ztp.Config.KubeconfigHUB).SetWithDynamic()
@@ -90,12 +91,13 @@ func createPVC() error {
 
 func getDomainFromCluster(client dynamic.Interface, ctx context.Context) string {
 
-	domain, err := resources.NewGenericList(ctx, client, INGRESS_CONTROLLER_GROUP, INGRESS_CONTROLLER_VERSION, INGRESS_CONTROLLER_VERSION, INGRESS_CONTROLLER_NS, ".").GetResourcesDynamically()
+	domain, err := resources.NewGenericGet(ctx, client, INGRESS_CONTROLLER_GROUP, INGRESS_CONTROLLER_VERSION, INGRESS_CONTROLLER_KIND, INGRESS_CONTROLLER_NS, INGRESS_CONTROLLER_NAME, INGRESS_CONTROLLER_JQPATH).GetResourceByJq()
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("[ERROR] Getting resources in GetDomainFromCluster: %e", err)
 	}
+	b, _ := json.Marshal(domain)
+	value := jsonvalue.MustUnmarshal(b)
+	d, _ := value.Get("Object", "status", "domain")
 
-	fmt.Println(domain)
-
-	return ""
+	return d.String()
 }

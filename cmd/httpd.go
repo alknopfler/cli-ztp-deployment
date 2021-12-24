@@ -11,9 +11,10 @@ func NewHTTPD() *cobra.Command {
 		Use:   "httpd",
 		Short: "Deploy new File Server running on the hub cluster ",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return deploy.RunHttpd()
+			var f deploy.FileServer
+			return f.RunHttpd()
 		},
 	}
-
+	//TODO add flags to customize httpd deployment
 	return cmd
 }
