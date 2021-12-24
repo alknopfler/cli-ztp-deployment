@@ -67,7 +67,7 @@ func (p *Preflight) verifyNodes(clientset kubernetes.Clientset, ctx context.Cont
 
 func (p *Preflight) verifyClusterOperators(client dynamic.Interface, ctx context.Context) {
 	defer wg.Done()
-	co, err := resources.NewGeneric(ctx, client, CLUSTER_OPERATOR_GROUP, CLUSTER_OPERATOR_VERSION, CLUSTER_OPERATOR_RESOURCE, "", CONDITION_CO_READY).GetResourcesByJq()
+	co, err := resources.NewGenericList(ctx, client, CLUSTER_OPERATOR_GROUP, CLUSTER_OPERATOR_VERSION, CLUSTER_OPERATOR_RESOURCE, "", CONDITION_CO_READY).GetResourcesByJq()
 	if err != nil {
 		log.Fatal(err)
 	}
