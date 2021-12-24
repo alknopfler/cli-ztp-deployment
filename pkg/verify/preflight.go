@@ -5,6 +5,7 @@ import (
 	"github.com/alknopfler/cli-ztp-deployment/config"
 	"github.com/alknopfler/cli-ztp-deployment/pkg/auth"
 	"github.com/alknopfler/cli-ztp-deployment/pkg/resources"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	"log"
@@ -41,7 +42,7 @@ func (p *Preflight) RunPreflights() error {
 
 func (p *Preflight) verifyPVS(clientset kubernetes.Clientset, ctx context.Context) {
 	defer wg.Done()
-	pvs, err := resources.NewCore(ctx, &clientset).GetPVS()
+	pvs, err := clientset.CoreV1().PersistentVolumes().List(ctx, metav1.ListOptions{})
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -54,7 +55,7 @@ func (p *Preflight) verifyPVS(clientset kubernetes.Clientset, ctx context.Contex
 
 func (p *Preflight) verifyNodes(clientset kubernetes.Clientset, ctx context.Context) {
 	defer wg.Done()
-	nodes, err := resources.NewCore(ctx, &clientset).GetNodes()
+	nodes, err := clientset.CoreV1().Nodes().List(ctx, metav1.ListOptions{})
 	if err != nil {
 		log.Fatal("[ERROR] ", err)
 	}
@@ -80,12 +81,12 @@ func (p *Preflight) verifyClusterOperators(client dynamic.Interface, ctx context
 
 func (p *Preflight) verifyMetal3Pods(client kubernetes.Clientset, ctx context.Context) {
 	defer wg.Done()
-	metal, err := resources.NewCoreWithParam(ctx, &client, METAL3_NAMESPACE, "").GetPods()
+	metal, err := client.CoreV1().Pods(METAL3_NAMESPACE).List(ctx, metav1.ListOptions{})
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	if len(metal) < 1 {
+	if len(metal.Items) < 1 {
 		log.Fatal("[ERROR] Metal3 pods insufficient...Exiting")
 	}
 	log.Println(">>>> Metal3 pods validated")

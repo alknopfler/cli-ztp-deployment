@@ -82,7 +82,6 @@ func createPVC() error {
 }
 
 func getDomainFromCluster() string {
-	//oc get ingresscontroller -n openshift-ingress-operator ${HTTPD_NS} -o jsonpath='{.status.domain}')
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -94,7 +93,7 @@ func getDomainFromCluster() string {
 		log.Fatal(err)
 	}
 
-	fmt.Println(domain.Object)
+	fmt.Println(domain)
 
 	return ""
 }
