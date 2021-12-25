@@ -12,6 +12,7 @@ func NewVerify() *cobra.Command {
 	}
 
 	c.AddCommand(NewPreflights())
+	c.AddCommand(NewVerifyHTTPD())
 
 	return c
 }

@@ -11,7 +11,7 @@ func NewDeploy() *cobra.Command {
 		SilenceUsage: true,
 	}
 
-	c.AddCommand(NewHTTPD())
+	c.AddCommand(NewDeployHTTPD())
 
 	return c
 }

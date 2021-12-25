@@ -30,8 +30,8 @@ type FileServer struct {
 	MountPath  string
 	Size       string
 	Domain     string
-	Port       int
-	TargetPort int
+	Port       int32
+	TargetPort int32
 }
 
 //Constructor NewFileServer
