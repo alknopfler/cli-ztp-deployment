@@ -52,7 +52,7 @@ func (f *FileServer) verifyDeployment(ctx context.Context, client kubernetes.Cli
 	defer wg.Done()
 	deployment, err := client.AppsV1().Deployments(HTTPD_NAMESPACE).Get(ctx, "nginx", metav1.GetOptions{})
 	if err != nil {
-		log.Fatalf("[ERROR] verifying Deployment httpd: %s", err)
+		log.Printf("[ERROR] verifying Deployment httpd: %s", err)
 		return false, err
 	}
 	if deployment.Status.AvailableReplicas != 1 {
@@ -67,7 +67,7 @@ func (f *FileServer) verifyRoute(ctx context.Context, client routev1.RouteV1Clie
 
 	route, err := client.Routes(HTTPD_NAMESPACE).Get(ctx, "nginx", metav1.GetOptions{})
 	if err != nil {
-		log.Fatalf("[ERROR] verifying Route httpd: %s", err)
+		log.Printf("[ERROR] verifying Route httpd: %s", err)
 		return false, err
 	}
 	if route.Status.Ingress[0].Host != "httpd-server"+f.Domain {
@@ -81,7 +81,7 @@ func (f *FileServer) verifyService(ctx context.Context, client kubernetes.Client
 	defer wg.Done()
 	service, err := client.CoreV1().Services(HTTPD_NAMESPACE).Get(ctx, "nginx", metav1.GetOptions{})
 	if err != nil {
-		log.Fatalf("[ERROR] error getting Service: %e", err)
+		log.Printf("[ERROR] error getting Service: %e", err)
 		return false, nil
 	}
 	if service.Spec.Ports[0].Port != f.Port {
@@ -96,7 +96,7 @@ func (f *FileServer) verifyPVC(ctx context.Context, client kubernetes.Clientset)
 	defer wg.Done()
 	pvc, err := client.CoreV1().PersistentVolumeClaims(HTTPD_NAMESPACE).Get(ctx, HTTPD_PVC_NAME, metav1.GetOptions{})
 	if err != nil {
-		log.Fatalf("[ERROR] error getting persistent volume: %e", err)
+		log.Printf("[ERROR] error getting persistent volume: %e", err)
 		return false, err
 	}
 	if pvc.Status.Phase != "Bound" {

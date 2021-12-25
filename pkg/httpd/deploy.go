@@ -41,14 +41,12 @@ func (f *FileServer) RunDeployHttpd() error {
 
 		}
 	}()
-
+	wg.Wait()
 	return nil
 }
 
 func (f *FileServer) createDeployment(ctx context.Context, client kubernetes.Clientset) error {
 	defer wg.Done()
-	//TODO verify if exist (skip flow) and if not create.
-	//
 
 	return nil
 }
@@ -72,7 +70,6 @@ func (f *FileServer) createPVC(ctx context.Context, client kubernetes.Clientset)
 }
 
 func getDomainFromCluster(client dynamic.Interface, ctx context.Context) string {
-
 	d, err := resources.NewGenericGet(ctx, client, INGRESS_CONTROLLER_GROUP, INGRESS_CONTROLLER_VERSION, INGRESS_CONTROLLER_KIND, INGRESS_CONTROLLER_NS, INGRESS_CONTROLLER_NAME, INGRESS_CONTROLLER_JQPATH).GetResourceByJq()
 	if err != nil {
 		log.Fatalf("[ERROR] Getting resources in GetDomainFromCluster: %e", err)
