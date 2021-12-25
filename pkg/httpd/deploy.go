@@ -40,7 +40,7 @@ func (f *FileServer) RunDeployHttpd() error {
 		}
 	}()
 	go func() {
-		err := f.createRoute(ctx, *ocpclient, *dynamicClient)
+		err := f.createRoute(ctx, *ocpclient, dynamicClient)
 		if err != nil {
 
 		}
