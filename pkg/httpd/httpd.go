@@ -18,6 +18,8 @@ const (
 	INGRESS_CONTROLLER_JQPATH  = ".status.domain"
 	INGRESS_CONTROLLER_NS      = "openshift-ingress-operator"
 	INGRESS_CONTROLLER_NAME    = "default"
+	HTTPD_NAMESPACE            = "default"
+	HTTPD_PVC_NAME             = "httpd-pv-claim"
 )
 
 var wg sync.WaitGroup
