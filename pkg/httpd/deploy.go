@@ -27,29 +27,37 @@ func (f *FileServer) RunDeployHttpd() error {
 	ocpclient := auth.NewZTPAuth(config.Ztp.Config.KubeconfigHUB).GetRouteAuth()
 
 	wg.Add(4)
-	go func() {
+	go func() error {
 		err := f.createDeployment(ctx, *client)
 		if err != nil {
-
+			log.Fatalf("Error creating deployment: %v", err)
+			return err
 		}
+		return nil
 	}()
-	go func() {
+	go func() error {
 		err := f.createService(ctx, *client)
 		if err != nil {
-
+			log.Fatalf("Error creating service: %v", err)
+			return err
 		}
+		return nil
 	}()
-	go func() {
+	go func() error {
 		err := f.createRoute(ctx, *ocpclient, dynamicClient)
 		if err != nil {
-
+			log.Fatalf("Error creating route: %v", err)
+			return err
 		}
+		return nil
 	}()
-	go func() {
+	go func() error {
 		err := f.createPVC(ctx, *client)
 		if err != nil {
-
+			log.Fatalf("Error creating PVC: %v", err)
+			return err
 		}
+		return nil
 	}()
 	wg.Wait()
 	return nil
