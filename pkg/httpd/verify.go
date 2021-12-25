@@ -44,7 +44,7 @@ func (f *FileServer) RunVerifyHttpd() error {
 		}
 		log.Println("Verify PVC httpd: ", res)
 	}()
-
+	wg.Wait()
 	return nil
 }
 

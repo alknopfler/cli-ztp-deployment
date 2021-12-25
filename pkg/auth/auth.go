@@ -1,7 +1,6 @@
 package auth
 
 import (
-	"fmt"
 	projectv1 "github.com/openshift/client-go/project/clientset/versioned/typed/project/v1"
 	routev1 "github.com/openshift/client-go/route/clientset/versioned/typed/route/v1"
 	"k8s.io/client-go/dynamic"
@@ -21,7 +20,6 @@ func NewZTPAuth(kubeconfig string) *ZTPAuth {
 }
 
 func (z *ZTPAuth) GetProjectAuth() *projectv1.ProjectV1Client {
-	fmt.Println(">>>> Using kubeconfig: ", z.KubeConfig)
 	config, err := clientcmd.BuildConfigFromFlags("", z.KubeConfig)
 	if err != nil {
 		log.Fatalf("[ERROR] error reading kubeconfig to get clientset: %e", err)
@@ -36,7 +34,6 @@ func (z *ZTPAuth) GetProjectAuth() *projectv1.ProjectV1Client {
 }
 
 func (z *ZTPAuth) GetRouteAuth() *routev1.RouteV1Client {
-	fmt.Println(">>>> Using kubeconfig: ", z.KubeConfig)
 	config, err := clientcmd.BuildConfigFromFlags("", z.KubeConfig)
 	if err != nil {
 		log.Fatalf("[ERROR] error reading kubeconfig to get clientset: %e", err)
@@ -51,7 +48,6 @@ func (z *ZTPAuth) GetRouteAuth() *routev1.RouteV1Client {
 }
 
 func (z *ZTPAuth) GetAuth() *kubernetes.Clientset {
-	fmt.Println(">>>> Using kubeconfig: ", z.KubeConfig)
 	config, err := clientcmd.BuildConfigFromFlags("", z.KubeConfig)
 	if err != nil {
 		log.Fatalf("[ERROR] error reading kubeconfig to get clientset: %e", err)
