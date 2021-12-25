@@ -2,6 +2,8 @@ package resources
 
 import (
 	"context"
+	apiroutev1 "github.com/openshift/api/route/v1"
+	routev1 "github.com/openshift/client-go/route/clientset/versioned/typed/route/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -17,6 +19,21 @@ func WaitForDeployment(ctx context.Context, deployment *appsv1.Deployment, clien
 			return false, err
 		}
 		if deployment.Status.ReadyReplicas == deployment.Status.Replicas {
+			return true, nil
+		}
+		return false, nil
+	})
+	return err
+}
+
+//Func to wait for route to be ready
+func WaitForRoute(ctx context.Context, client *routev1.RouteV1Client, route *apiroutev1.Route) error {
+	err := wait.Poll(time.Second, time.Minute, func() (bool, error) {
+		res, err := client.Routes(route.Namespace).Get(ctx, route.Name, metav1.GetOptions{})
+		if err != nil {
+			return false, err
+		}
+		if res.Status.Ingress[0].Host == route.Spec.Host {
 			return true, nil
 		}
 		return false, nil

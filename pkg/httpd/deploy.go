@@ -7,9 +7,13 @@ import (
 	"github.com/alknopfler/cli-ztp-deployment/config"
 	"github.com/alknopfler/cli-ztp-deployment/pkg/auth"
 	"github.com/alknopfler/cli-ztp-deployment/pkg/resources"
+	apiroutev1 "github.com/openshift/api/route/v1"
+	routev1 "github.com/openshift/client-go/route/clientset/versioned/typed/route/v1"
+
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	"log"
@@ -19,6 +23,9 @@ func (f *FileServer) RunDeployHttpd() error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	client := auth.NewZTPAuth(config.Ztp.Config.KubeconfigHUB).GetAuth()
+	dynamicClient := auth.NewZTPAuth(config.Ztp.Config.KubeconfigHUB).GetAuthWithGeneric()
+	ocpclient := auth.NewZTPAuth(config.Ztp.Config.KubeconfigHUB).GetRouteAuth()
+
 	wg.Add(4)
 	go func() {
 		err := f.createDeployment(ctx, *client)
@@ -33,7 +40,7 @@ func (f *FileServer) RunDeployHttpd() error {
 		}
 	}()
 	go func() {
-		err := f.createRoute(ctx, *client)
+		err := f.createRoute(ctx, *ocpclient, *dynamicClient)
 		if err != nil {
 
 		}
@@ -122,8 +129,48 @@ func (f *FileServer) createDeployment(ctx context.Context, client kubernetes.Cli
 	return nil
 }
 
-func (f *FileServer) createRoute(ctx context.Context, client kubernetes.Clientset) error {
+func (f *FileServer) createRoute(ctx context.Context, client routev1.RouteV1Client, dynamicclient dynamic.Interface) error {
 	defer wg.Done()
+	if _, err := f.verifyRoute(ctx, client); err != nil {
+		log.Println(">>>> Creating route HTTPD")
+		route := apiroutev1.Route{
+			ObjectMeta: metav1.ObjectMeta{
+				Labels: map[string]string{
+					"app": "nginx",
+				},
+				Name:      "httpd-server-route",
+				Namespace: HTTPD_NAMESPACE,
+			},
+			Spec: apiroutev1.RouteSpec{
+				Host: "httpd-server" + getDomainFromCluster(dynamicclient, ctx),
+				Port: &apiroutev1.RoutePort{
+					TargetPort: intstr.IntOrString{
+						Type:   DEFAULT_TARGETPORT,
+						IntVal: DEFAULT_TARGETPORT,
+						StrVal: "8080",
+					},
+				},
+				To: apiroutev1.RouteTargetReference{
+					Kind:   "Service",
+					Name:   "httpd-server-service",
+					Weight: nil,
+				},
+				WildcardPolicy: "None",
+			},
+		}
+		res, err := client.Routes(HTTPD_NAMESPACE).Create(ctx, &route, metav1.CreateOptions{})
+		if err != nil {
+			log.Printf("Error creating route: %e", err)
+			return err
+		}
+		err = resources.WaitForRoute(ctx, &client, res)
+		if err != nil {
+			log.Printf("[ERROR] waiting for route: %s", err)
+			return err
+		}
+		log.Printf(">>>> Created route %s\n", res.GetObjectMeta().GetName())
+		return nil
+	}
 
 	return nil
 }
