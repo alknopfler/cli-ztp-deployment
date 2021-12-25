@@ -15,7 +15,7 @@ import (
 func (f *FileServer) RunDeployHttpd() error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	client := auth.NewZTPAuth(config.Ztp.Config.KubeconfigHUB).Set()
+	client := auth.NewZTPAuth(config.Ztp.Config.KubeconfigHUB).GetAuth()
 	wg.Add(4)
 	go func() {
 		err := f.createDeployment(ctx, *client)

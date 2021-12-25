@@ -18,7 +18,7 @@ func NewZTPAuth(kubeconfig string) *ZTPAuth {
 	}
 }
 
-func (z *ZTPAuth) Set() *kubernetes.Clientset {
+func (z *ZTPAuth) GetAuth() *kubernetes.Clientset {
 	fmt.Println(">>>> Using kubeconfig: ", z.KubeConfig)
 	config, err := clientcmd.BuildConfigFromFlags("", z.KubeConfig)
 	if err != nil {
@@ -33,7 +33,7 @@ func (z *ZTPAuth) Set() *kubernetes.Clientset {
 	return clientset
 }
 
-func (z *ZTPAuth) SetWithDynamic() dynamic.Interface {
+func (z *ZTPAuth) GetAuthWithGeneric() dynamic.Interface {
 
 	config, err := clientcmd.BuildConfigFromFlags("", z.KubeConfig)
 	if err != nil {

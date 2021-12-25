@@ -20,6 +20,7 @@ const (
 	INGRESS_CONTROLLER_NAME    = "default"
 	HTTPD_NAMESPACE            = "default"
 	HTTPD_PVC_NAME             = "httpd-pv-claim"
+	HTTPD_DEPLOYMENT_NAME      = "nginx"
 )
 
 var wg sync.WaitGroup
@@ -37,7 +38,7 @@ type FileServer struct {
 func NewFileServerDefault() *FileServer {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	client := auth.NewZTPAuth(config.Ztp.Config.KubeconfigHUB).SetWithDynamic()
+	client := auth.NewZTPAuth(config.Ztp.Config.KubeconfigHUB).GetAuthWithGeneric()
 
 	return &FileServer{
 		MountPath:  DEFAULT_MOUNT_PATH,

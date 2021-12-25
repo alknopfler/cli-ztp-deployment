@@ -28,8 +28,8 @@ func (p *Preflight) RunPreflights() error {
 	log.Println(">>>> Running preflights")
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	client := auth.NewZTPAuth(config.Ztp.Config.KubeconfigHUB).Set()
-	dynamicClient := auth.NewZTPAuth(config.Ztp.Config.KubeconfigHUB).SetWithDynamic()
+	client := auth.NewZTPAuth(config.Ztp.Config.KubeconfigHUB).GetAuth()
+	dynamicClient := auth.NewZTPAuth(config.Ztp.Config.KubeconfigHUB).GetAuthWithGeneric()
 
 	wg.Add(4)
 	go p.verifyNodes(*client, ctx)

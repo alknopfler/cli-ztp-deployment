@@ -1,7 +1,7 @@
 package cmd
 
 import (
-	deploy "github.com/alknopfler/cli-ztp-deployment/pkg/deploy/httpd"
+	deploy "github.com/alknopfler/cli-ztp-deployment/pkg/httpd"
 	"github.com/spf13/cobra"
 )
 

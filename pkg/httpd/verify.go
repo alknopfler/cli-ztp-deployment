@@ -12,7 +12,7 @@ import (
 func (f *FileServer) RunVerifyHttpd() error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	client := auth.NewZTPAuth(config.Ztp.Config.KubeconfigHUB).Set()
+	client := auth.NewZTPAuth(config.Ztp.Config.KubeconfigHUB).GetAuth()
 	wg.Add(4)
 	go func() {
 		res, err := f.verifyDeployment(ctx, *client)
@@ -48,9 +48,14 @@ func (f *FileServer) RunVerifyHttpd() error {
 
 func (f *FileServer) verifyDeployment(ctx context.Context, client kubernetes.Clientset) (bool, error) {
 	defer wg.Done()
-	//TODO verify if exist (skip flow) and if not create.
-	//
-
+	deployment, err := client.AppsV1().Deployments(HTTPD_NAMESPACE).Get(ctx, "nginx", metav1.GetOptions{})
+	if err != nil {
+		log.Fatalf("[ERROR] verifying Deployment httpd: %s", err)
+		return false, err
+	}
+	if deployment.Status.AvailableReplicas != 1 {
+		return false, nil
+	}
 	return true, nil
 }
 

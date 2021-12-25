@@ -1,7 +1,7 @@
 package cmd
 
 import (
-	"github.com/alknopfler/cli-ztp-deployment/pkg/verify"
+	"github.com/alknopfler/cli-ztp-deployment/pkg/preflight"
 	"github.com/spf13/cobra"
 )
 
@@ -11,7 +11,7 @@ func NewPreflights() *cobra.Command {
 		Use:   "preflights",
 		Short: "Run Preflight checks to validate the future deployments",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			var p verify.Preflight
+			var p preflight.Preflight
 			return p.RunPreflights()
 		},
 	}
