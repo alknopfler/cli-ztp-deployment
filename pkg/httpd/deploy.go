@@ -7,6 +7,9 @@ import (
 	"github.com/alknopfler/cli-ztp-deployment/config"
 	"github.com/alknopfler/cli-ztp-deployment/pkg/auth"
 	"github.com/alknopfler/cli-ztp-deployment/pkg/resources"
+	appsv1 "k8s.io/api/apps/v1"
+	apiv1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	"log"
@@ -47,7 +50,75 @@ func (f *FileServer) RunDeployHttpd() error {
 
 func (f *FileServer) createDeployment(ctx context.Context, client kubernetes.Clientset) error {
 	defer wg.Done()
-
+	if _, err := f.verifyDeployment(ctx, client); err != nil {
+		log.Println(">>>> Creating deployment HTTPD")
+		deployment := &appsv1.Deployment{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "nginx",
+				Labels: map[string]string{
+					"app": "nginx",
+				},
+			},
+			Spec: appsv1.DeploymentSpec{
+				Replicas: int32Ptr(2),
+				Selector: &metav1.LabelSelector{
+					MatchLabels: map[string]string{
+						"app": "nginx",
+					},
+				},
+				Template: apiv1.PodTemplateSpec{
+					ObjectMeta: metav1.ObjectMeta{
+						Labels: map[string]string{
+							"app": "nginx",
+						},
+					},
+					Spec: apiv1.PodSpec{
+						Volumes: []apiv1.Volume{
+							{
+								Name: "httpd-pv-storage",
+								VolumeSource: apiv1.VolumeSource{
+									PersistentVolumeClaim: &apiv1.PersistentVolumeClaimVolumeSource{
+										ClaimName: "httpd-pv-claim",
+									},
+								},
+							},
+						},
+						Containers: []apiv1.Container{
+							{
+								Name:  "nginx",
+								Image: "quay.io/openshift-scale/nginx:latest",
+								Ports: []apiv1.ContainerPort{
+									{
+										ContainerPort: 8080,
+									},
+								},
+								VolumeMounts: []apiv1.VolumeMount{
+									{
+										Name:      "httpd-pv-storage",
+										MountPath: "/usr/share/nginx/html",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		}
+		res, err := client.AppsV1().Deployments(HTTPD_NAMESPACE).Create(ctx, deployment, metav1.CreateOptions{})
+		if err != nil {
+			log.Printf("Error creating deployment: %e", err)
+			return err
+		}
+		err = resources.WaitForDeployment(ctx, res, &client)
+		if err != nil {
+			log.Printf("[ERROR] waiting for deployment: %s", err)
+			return err
+		}
+		log.Printf(">>>> Created deployment %s\n", res.GetObjectMeta().GetName())
+		return nil
+	}
+	// Already created and return nil
+	log.Printf(">>>> Deployment HTTPD already exists. Skipping creation.")
 	return nil
 }
 
@@ -80,3 +151,5 @@ func getDomainFromCluster(client dynamic.Interface, ctx context.Context) string 
 
 	return domain.String()
 }
+
+func int32Ptr(i int32) *int32 { return &i }
