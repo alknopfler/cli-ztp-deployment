@@ -5,6 +5,7 @@ import (
 	apiroutev1 "github.com/openshift/api/route/v1"
 	routev1 "github.com/openshift/client-go/route/clientset/versioned/typed/route/v1"
 	appsv1 "k8s.io/api/apps/v1"
+	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
@@ -34,6 +35,21 @@ func WaitForRoute(ctx context.Context, client *routev1.RouteV1Client, route *api
 			return false, err
 		}
 		if res.Status.Ingress[0].Host == route.Spec.Host {
+			return true, nil
+		}
+		return false, nil
+	})
+	return err
+}
+
+//Func to wait for service to be ready
+func WaitForService(ctx context.Context, client *kubernetes.Clientset, service *v1.Service) error {
+	err := wait.Poll(time.Second, time.Minute, func() (bool, error) {
+		res, err := client.CoreV1().Services(service.Namespace).Get(ctx, service.Name, metav1.GetOptions{})
+		if err != nil {
+			return false, err
+		}
+		if res.Spec.ClusterIP == service.Spec.ClusterIP {
 			return true, nil
 		}
 		return false, nil
