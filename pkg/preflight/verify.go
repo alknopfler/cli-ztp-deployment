@@ -28,6 +28,9 @@ type Preflight struct{}
 
 var wg sync.WaitGroup
 
+//Run Preflight:
+// - Check if the conditions are ready or not
+// - Strategy: wait for all to get the error at the end in order to now where is the problem.
 func (p *Preflight) RunPreflights() error {
 	log.Println(color.InBold(color.InYellow(">>>> Running preflights")))
 	ctx, cancel := context.WithCancel(context.Background())
@@ -101,7 +104,7 @@ func (p *Preflight) verifyClusterOperators(client dynamic.Interface, ctx context
 		log.Println(color.InRed("[ERROR] Cluster operators are not available...Exiting"))
 		return errors.New("[ERROR] Cluster operators are not available...Exiting")
 	}
-	log.Println(color.InGreen(">>>> co validated"))
+	log.Println(color.InGreen(">>>>[OK] Cluster Operators validated"))
 	return nil
 }
 
@@ -117,6 +120,6 @@ func (p *Preflight) verifyMetal3Pods(client kubernetes.Clientset, ctx context.Co
 		log.Println(color.InRed("[ERROR] Metal3 pods insufficient...Exiting"))
 		return errors.New("[ERROR] Metal3 pods insufficient...Exiting")
 	}
-	log.Println(color.InGreen(">>>> Metal3 pods validated"))
+	log.Println(color.InGreen(">>>>[OK] Metal3 pods validated"))
 	return nil
 }

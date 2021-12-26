@@ -14,6 +14,7 @@ import (
 
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
+	coreV1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/dynamic"
@@ -23,6 +24,9 @@ import (
 
 var wgDeployHTTPD sync.WaitGroup
 
+//Run deploy HTTPD:
+// - Launch all resources to be created at the same time
+// - Strategy: First fail (if any resource fails to be created)
 func (f *FileServer) RunDeployHttpd() error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -73,8 +77,8 @@ func (f *FileServer) RunDeployHttpd() error {
 
 //Func to create deployment
 func (f *FileServer) createDeployment(ctx context.Context, client kubernetes.Clientset) error {
-	if _, err := f.verifyDeployment(ctx, client); err != nil {
-		log.Println(color.InBold(color.InYellow(">>>> Not found. Creating deployment HTTPD")))
+	if found, err := f.verifyDeployment(ctx, client); err != nil && !found {
+		log.Println(color.InBold(color.InYellow(">>>> Creating Deployment HTTPD")))
 		deployment := &appsv1.Deployment{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: HTTPD_DEPLOYMENT_NAME,
@@ -147,7 +151,7 @@ func (f *FileServer) createDeployment(ctx context.Context, client kubernetes.Cli
 
 //Func to create a Route
 func (f *FileServer) createRoute(ctx context.Context, client routev1.RouteV1Client, dynamicclient dynamic.Interface) error {
-	if _, err := f.verifyRoute(ctx, client); err != nil {
+	if found, err := f.verifyRoute(ctx, client); err != nil && !found {
 		log.Println(color.InBold(color.InYellow(">>>> Creating route HTTPD")))
 		route := apiroutev1.Route{
 			ObjectMeta: metav1.ObjectMeta{
@@ -161,9 +165,8 @@ func (f *FileServer) createRoute(ctx context.Context, client routev1.RouteV1Clie
 				Host: "httpd-server" + GetDomainFromCluster(dynamicclient, ctx),
 				Port: &apiroutev1.RoutePort{
 					TargetPort: intstr.IntOrString{
-						Type:   DEFAULT_TARGETPORT,
-						IntVal: DEFAULT_TARGETPORT,
-						StrVal: "8080",
+						Type:   intstr.Int,
+						IntVal: 8080,
 					},
 				},
 				To: apiroutev1.RouteTargetReference{
@@ -194,32 +197,31 @@ func (f *FileServer) createRoute(ctx context.Context, client routev1.RouteV1Clie
 
 //Func to create a Service
 func (f *FileServer) createService(ctx context.Context, client kubernetes.Clientset) error {
-	if _, err := f.verifyService(ctx, client); err != nil {
+	if found, err := f.verifyService(ctx, client); err != nil && !found {
 		log.Println(color.InBold(color.InYellow(">>>> Creating Service HTTPD")))
-		var svcPorts []apiv1.ServicePort
-		svcPort := apiv1.ServicePort{
-			Protocol: "TCP",
-			Port:     DEFAULT_PORT,
-			TargetPort: intstr.IntOrString{
-				Type:   DEFAULT_TARGETPORT,
-				IntVal: DEFAULT_TARGETPORT,
-				StrVal: "8080",
-			},
-		}
-		svcPorts = append(svcPorts, svcPort)
-		service := &apiv1.Service{
+		serviceSpec := &coreV1.Service{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "httpd-server-service",
 			},
-			Spec: apiv1.ServiceSpec{
-				Type: "ClusterIP",
+			Spec: coreV1.ServiceSpec{
 				Selector: map[string]string{
 					"app": "nginx",
 				},
-				Ports: svcPorts,
+				Type: "ClusterIP",
+				Ports: []coreV1.ServicePort{
+					{
+						Port:     80,
+						Protocol: "TCP",
+						TargetPort: intstr.IntOrString{
+							Type:   intstr.Int,
+							IntVal: 8080,
+						},
+					},
+				},
 			},
 		}
-		res, err := client.CoreV1().Services(HTTPD_NAMESPACE).Create(ctx, service, metav1.CreateOptions{})
+
+		res, err := client.CoreV1().Services(HTTPD_NAMESPACE).Create(ctx, serviceSpec, metav1.CreateOptions{})
 		if err != nil {
 			log.Printf(color.InRed("Error creating Service: %e"), err)
 			return err
@@ -238,8 +240,8 @@ func (f *FileServer) createService(ctx context.Context, client kubernetes.Client
 }
 
 func (f *FileServer) createPVC(ctx context.Context, client kubernetes.Clientset) error {
-	if _, err := f.verifyPVC(ctx, client); err != nil {
-		log.Println(color.InBold(color.InYellow(">>>> Creating Service HTTPD")))
+	if found, err := f.verifyPVC(ctx, client); err != nil && !found {
+		log.Println(color.InBold(color.InYellow(">>>> Creating PVC HTTPD")))
 		pvc := &apiv1.PersistentVolumeClaim{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "httpd-pv-claim",

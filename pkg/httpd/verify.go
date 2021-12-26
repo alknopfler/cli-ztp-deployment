@@ -2,6 +2,7 @@ package httpd
 
 import (
 	"context"
+	"errors"
 	"github.com/TwiN/go-color"
 	"github.com/alknopfler/cli-ztp-deployment/config"
 	"github.com/alknopfler/cli-ztp-deployment/pkg/auth"
@@ -14,98 +15,104 @@ import (
 
 var wgVerifyHTTP sync.WaitGroup
 
-func (f *FileServer) RunVerifyHttpd() error {
+//Run Preflight:
+// - Check if the conditions are ready or not to be deployed or even verify if the resource is ready
+// - Strategy: wait for all to get the error at the end in order to now where is the problem.
+func (f *FileServer) RunVerifyHttpd() {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	client := auth.NewZTPAuth(config.Ztp.Config.KubeconfigHUB).GetAuth()
 	routeClient := auth.NewZTPAuth(config.Ztp.Config.KubeconfigHUB).GetRouteAuth()
+
 	wgVerifyHTTP.Add(4)
 	go func() {
-		res, err := f.verifyDeployment(ctx, *client)
-		wgVerifyHTTP.Done()
-		if err != nil {
-			log.Fatalf(color.InRed("[ERROR] verifyDeployment: %e"), err)
+		found, err := f.verifyDeployment(ctx, *client)
+		if !found && err != nil {
+			log.Println(color.InRed("[ERROR] Deployment httpd not found"))
+		} else if found && err != nil {
+			log.Println(color.InRed("[ERROR] Deployment httpd found but not ready"))
+		} else {
+			log.Println(color.InGreen("[OK] Deployment httpd found and ready"))
 		}
-		log.Println("Verify Deployment httpd: ", res)
+		wgVerifyHTTP.Done()
 	}()
 	go func() {
-		res, err := f.verifyService(ctx, *client)
-		wgVerifyHTTP.Done()
-		if err != nil {
-			log.Fatal("[ERROR] verifyService: ", err)
+		found, err := f.verifyService(ctx, *client)
+		if !found && err != nil {
+			log.Println(color.InRed("[ERROR] Service httpd not found"))
+		} else if found && err != nil {
+			log.Println(color.InRed("[ERROR] Service httpd found but not ready"))
+		} else {
+			log.Println(color.InGreen("[OK] Service httpd found and ready"))
 		}
-		log.Println("Verify Service httpd: ", res)
+		wgVerifyHTTP.Done()
 	}()
 	go func() {
-		res, err := f.verifyRoute(ctx, *routeClient)
-		wgVerifyHTTP.Done()
-		if err != nil {
-			log.Fatal("[ERROR] verifyRoute: ", err)
+		found, err := f.verifyRoute(ctx, *routeClient)
+		if !found && err != nil {
+			log.Println(color.InRed("[ERROR] Route httpd not found"))
+		} else if found && err != nil {
+			log.Println(color.InRed("[ERROR] Route httpd found but not ready"))
+		} else {
+			log.Println(color.InGreen("[OK] Route httpd found and ready"))
 		}
-		log.Println("Verify Route httpd: ", res)
+		wgVerifyHTTP.Done()
 	}()
 	go func() {
-		res, err := f.verifyPVC(ctx, *client)
-		wgVerifyHTTP.Done()
-		if err != nil {
-			log.Fatal("[ERROR] verifyPVC: ", err)
+		found, err := f.verifyPVC(ctx, *client)
+		if !found && err != nil {
+			log.Println(color.InRed("[ERROR] PVC httpd not found"))
+		} else if found && err != nil {
+			log.Println(color.InRed("[ERROR] PVC httpd found but not ready"))
+		} else {
+			log.Println(color.InGreen("[OK] PVC httpd found and ready"))
 		}
-		log.Println("Verify PVC httpd: ", res)
+		wgVerifyHTTP.Done()
 	}()
 	wgVerifyHTTP.Wait()
-	return nil
 }
 
-func (f *FileServer) verifyDeployment(ctx context.Context, client kubernetes.Clientset) (bool, error) {
+func (f *FileServer) verifyDeployment(ctx context.Context, client kubernetes.Clientset) (found bool, err error) {
 	deployment, err := client.AppsV1().Deployments(HTTPD_NAMESPACE).Get(ctx, "nginx", metav1.GetOptions{})
 	if err != nil {
-		log.Printf("[ERROR] verifying Deployment httpd: %s", err)
 		return false, err
 	}
 	if deployment.Status.AvailableReplicas != 1 {
-		log.Printf("[ERROR] verifying Deployment httpd: %s", "Deployment is not ready")
-		return false, nil
+		return true, errors.New(color.InRed("[ERROR] Deployment is not ready, replicas available insufficent"))
 	}
 	return true, nil
 }
 
-func (f *FileServer) verifyRoute(ctx context.Context, client routev1.RouteV1Client) (bool, error) {
+func (f *FileServer) verifyRoute(ctx context.Context, client routev1.RouteV1Client) (found bool, err error) {
 	route, err := client.Routes(HTTPD_NAMESPACE).Get(ctx, "nginx", metav1.GetOptions{})
 	if err != nil {
-		log.Printf("[ERROR] verifying Route httpd: %s", err)
 		return false, err
 	}
 	if route.Status.Ingress[0].Host != "httpd-server"+f.Domain {
-		log.Printf("[ERROR] verifying Route httpd: %s", "Route is not ready")
-		return false, nil
+		return true, errors.New(color.InRed("[ERROR] verifying Route httpd: Route is not ready"))
 	}
 	return true, nil
 }
 
-func (f *FileServer) verifyService(ctx context.Context, client kubernetes.Clientset) (bool, error) {
+func (f *FileServer) verifyService(ctx context.Context, client kubernetes.Clientset) (found bool, err error) {
 	service, err := client.CoreV1().Services(HTTPD_NAMESPACE).Get(ctx, "nginx", metav1.GetOptions{})
 	if err != nil {
-		log.Printf("[ERROR] error getting Service: %e", err)
-		return false, nil
+		return false, err
 	}
 	if service.Spec.Ports[0].Port != f.Port {
-		log.Printf("[ERROR] verifying Service httpd: %s", "Service is not ready")
-		return false, nil
+		return true, errors.New(color.InRed("[ERROR] verifying Service httpd: Service port is not ready"))
 	}
-
 	return true, nil
 }
 
-func (f *FileServer) verifyPVC(ctx context.Context, client kubernetes.Clientset) (bool, error) {
+func (f *FileServer) verifyPVC(ctx context.Context, client kubernetes.Clientset) (found bool, err error) {
 	pvc, err := client.CoreV1().PersistentVolumeClaims(HTTPD_NAMESPACE).Get(ctx, HTTPD_PVC_NAME, metav1.GetOptions{})
 	if err != nil {
-		log.Printf("[ERROR] error getting persistent volume: %e", err)
 		return false, err
 	}
 	if pvc.Status.Phase != "Bound" {
-		log.Printf("[ERROR] verifying PVC httpd: %s", "PVC is not ready")
-		return false, err
+		return true, errors.New(color.InRed("[ERROR] verifying PVC httpd: PVC is not bound"))
 	}
 	return true, nil
 }
