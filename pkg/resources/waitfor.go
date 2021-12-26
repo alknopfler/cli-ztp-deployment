@@ -2,18 +2,13 @@ package resources
 
 import (
 	"context"
-	"encoding/json"
-	jsonvalue "github.com/Andrew-M-C/go.jsonvalue"
-	"github.com/alknopfler/cli-ztp-deployment/pkg/httpd"
 	apiroutev1 "github.com/openshift/api/route/v1"
 	routev1 "github.com/openshift/client-go/route/clientset/versioned/typed/route/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
-	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
-	"log"
 	"time"
 )
 
@@ -75,16 +70,4 @@ func WaitForPVC(ctx context.Context, client *kubernetes.Clientset, pvc *v1.Persi
 		return false, nil
 	})
 	return err
-}
-
-func GetDomainFromCluster(client dynamic.Interface, ctx context.Context) string {
-	d, err := NewGenericGet(ctx, client, httpd.INGRESS_CONTROLLER_GROUP, httpd.INGRESS_CONTROLLER_VERSION, httpd.INGRESS_CONTROLLER_KIND, httpd.INGRESS_CONTROLLER_NS, httpd.INGRESS_CONTROLLER_NAME, httpd.INGRESS_CONTROLLER_JQPATH).GetResourceByJq()
-	if err != nil {
-		log.Fatalf("[ERROR] Getting resources in GetDomainFromCluster: %e", err)
-	}
-	b, _ := json.Marshal(d)
-	value := jsonvalue.MustUnmarshal(b)
-	domain, _ := value.Get("Object", "status", "domain")
-
-	return domain.String()
 }

@@ -2,6 +2,7 @@ package httpd
 
 import (
 	"context"
+	"github.com/alknopfler/cli-ztp-deployment/pkg/utils"
 	"k8s.io/apimachinery/pkg/api/resource"
 
 	"github.com/alknopfler/cli-ztp-deployment/config"
@@ -152,7 +153,7 @@ func (f *FileServer) createRoute(ctx context.Context, client routev1.RouteV1Clie
 				Namespace: HTTPD_NAMESPACE,
 			},
 			Spec: apiroutev1.RouteSpec{
-				Host: "httpd-server" + resources.GetDomainFromCluster(dynamicclient, ctx),
+				Host: "httpd-server" + utils.GetDomainFromCluster(dynamicclient, ctx),
 				Port: &apiroutev1.RoutePort{
 					TargetPort: intstr.IntOrString{
 						Type:   DEFAULT_TARGETPORT,
