@@ -2,6 +2,7 @@ package httpd
 
 import (
 	"context"
+	"github.com/TwiN/go-color"
 	"github.com/alknopfler/cli-ztp-deployment/config"
 	"github.com/alknopfler/cli-ztp-deployment/pkg/auth"
 	routev1 "github.com/openshift/client-go/route/clientset/versioned/typed/route/v1"
@@ -24,7 +25,7 @@ func (f *FileServer) RunVerifyHttpd() error {
 		res, err := f.verifyDeployment(ctx, *client)
 		wgVerifyHTTP.Done()
 		if err != nil {
-			log.Fatal("[ERROR] verifyDeployment: ", err)
+			log.Fatalf(color.InRed("[ERROR] verifyDeployment: %e"), err)
 		}
 		log.Println("Verify Deployment httpd: ", res)
 	}()

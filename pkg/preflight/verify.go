@@ -2,6 +2,8 @@ package preflight
 
 import (
 	"context"
+	"errors"
+	"github.com/TwiN/go-color"
 	"github.com/alknopfler/cli-ztp-deployment/config"
 	"github.com/alknopfler/cli-ztp-deployment/pkg/auth"
 	"github.com/alknopfler/cli-ztp-deployment/pkg/resources"
@@ -27,69 +29,94 @@ type Preflight struct{}
 var wg sync.WaitGroup
 
 func (p *Preflight) RunPreflights() error {
-	log.Println(">>>> Running preflights")
+	log.Println(color.InBold(color.InYellow(">>>> Running preflights")))
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	client := auth.NewZTPAuth(config.Ztp.Config.KubeconfigHUB).GetAuth()
 	dynamicClient := auth.NewZTPAuth(config.Ztp.Config.KubeconfigHUB).GetAuthWithGeneric()
 
 	wg.Add(4)
-	go p.verifyNodes(*client, ctx)
-	go p.verifyPVS(*client, ctx)
-	go p.verifyClusterOperators(dynamicClient, ctx)
-	go p.verifyMetal3Pods(*client, ctx)
+	var errNodes, errPVS, errCO, errMetal3 error
+	go func() {
+		errNodes = p.verifyNodes(*client, ctx)
+	}()
+	go func() {
+		errPVS = p.verifyPVS(*client, ctx)
+	}()
+	go func() {
+		errCO = p.verifyClusterOperators(dynamicClient, ctx)
+	}()
+	go func() {
+		errMetal3 = p.verifyMetal3Pods(*client, ctx)
+	}()
 	wg.Wait()
+
+	if errNodes != nil || errPVS != nil || errCO != nil || errMetal3 != nil {
+		return errors.New(color.InRed("[ERROR] Preflights failed"))
+	}
 	return nil
 }
 
-func (p *Preflight) verifyPVS(clientset kubernetes.Clientset, ctx context.Context) {
+func (p *Preflight) verifyPVS(clientset kubernetes.Clientset, ctx context.Context) error {
 	defer wg.Done()
 	pvs, err := clientset.CoreV1().PersistentVolumes().List(ctx, metav1.ListOptions{})
 	if err != nil {
-		log.Printf("[ERROR] Error getting the PV info: %e", err)
+		log.Printf(color.InRed("[ERROR] Error getting the PV info: %e"), err)
+		return err
 	}
 
 	if len(pvs.Items) < 3 {
-		log.Println("[ERROR] PV insufficients...")
+		log.Println(color.InRed("[ERROR] PV insufficients..."))
+		return errors.New("[ERROR] PV insufficients...")
 	}
-	log.Println(">>>>[OK] Pvs validated")
+	log.Println(color.InGreen(">>>>[OK] Pvs validated"))
+	return nil
 }
 
-func (p *Preflight) verifyNodes(clientset kubernetes.Clientset, ctx context.Context) {
+func (p *Preflight) verifyNodes(clientset kubernetes.Clientset, ctx context.Context) error {
 	defer wg.Done()
 	nodes, err := clientset.CoreV1().Nodes().List(ctx, metav1.ListOptions{})
 	if err != nil {
-		log.Printf("[ERROR] Error getting Nodes info: %e", err)
+		log.Printf(color.InRed("[ERROR] Error getting Nodes info: %e"), err)
+		return err
 	}
 
 	if len(nodes.Items) < 3 {
-		log.Println("[ERROR] Nodes insufficient.")
+		log.Println(color.InRed("[ERROR] Nodes insufficient."))
+		return errors.New("[ERROR] Nodes insufficient.")
 	}
-	log.Println(">>>>[OK] Nodes validated")
+	log.Println(color.InGreen(">>>>[OK] Nodes validated"))
+	return nil
 }
 
-func (p *Preflight) verifyClusterOperators(client dynamic.Interface, ctx context.Context) {
+func (p *Preflight) verifyClusterOperators(client dynamic.Interface, ctx context.Context) error {
 	defer wg.Done()
 	co, err := resources.NewGenericList(ctx, client, CLUSTER_OPERATOR_GROUP, CLUSTER_OPERATOR_VERSION, CLUSTER_OPERATOR_RESOURCE, "", CONDITION_CO_READY).GetResourcesByJq()
 	if err != nil {
-		log.Fatal(err)
+		log.Println(color.InRed("[ERROR] Error getting cluster operators info: %e"), err)
+		return err
 	}
 
 	if len(co) > 0 {
-		log.Fatal("[ERROR] Cluster operators are not available...Exiting")
+		log.Println(color.InRed("[ERROR] Cluster operators are not available...Exiting"))
+		return errors.New("[ERROR] Cluster operators are not available...Exiting")
 	}
-	log.Println(">>>> co validated")
+	log.Println(color.InGreen(">>>> co validated"))
+	return nil
 }
 
-func (p *Preflight) verifyMetal3Pods(client kubernetes.Clientset, ctx context.Context) {
+func (p *Preflight) verifyMetal3Pods(client kubernetes.Clientset, ctx context.Context) error {
 	defer wg.Done()
 	metal, err := client.CoreV1().Pods(METAL3_NAMESPACE).List(ctx, metav1.ListOptions{})
 	if err != nil {
-		log.Fatal(err)
+		log.Println(color.InRed("[ERROR] Error getting pods about metal3: %e"), err)
+		return err
 	}
 
 	if len(metal.Items) < 1 {
-		log.Fatal("[ERROR] Metal3 pods insufficient...Exiting")
+		log.Println(color.InRed("[ERROR] Metal3 pods insufficient...Exiting"))
+		return errors.New("[ERROR] Metal3 pods insufficient...Exiting")
 	}
-	log.Println(">>>> Metal3 pods validated")
+	log.Println(color.InGreen(">>>> Metal3 pods validated"))
+	return nil
 }

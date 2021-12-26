@@ -2,6 +2,7 @@ package httpd
 
 import (
 	"context"
+	"github.com/TwiN/go-color"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"sync"
 
@@ -73,7 +74,7 @@ func (f *FileServer) RunDeployHttpd() error {
 //Func to create deployment
 func (f *FileServer) createDeployment(ctx context.Context, client kubernetes.Clientset) error {
 	if _, err := f.verifyDeployment(ctx, client); err != nil {
-		log.Println(">>>> Not found. Creating deployment HTTPD")
+		log.Println(color.InBold(color.InYellow(">>>> Not found. Creating deployment HTTPD")))
 		deployment := &appsv1.Deployment{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: HTTPD_DEPLOYMENT_NAME,
@@ -128,26 +129,26 @@ func (f *FileServer) createDeployment(ctx context.Context, client kubernetes.Cli
 		}
 		res, err := client.AppsV1().Deployments(HTTPD_NAMESPACE).Create(ctx, deployment, metav1.CreateOptions{})
 		if err != nil {
-			log.Printf("Error creating deployment: %e", err)
+			log.Printf(color.InRed("Error creating deployment: %e"), err)
 			return err
 		}
 		err = resources.WaitForDeployment(ctx, res, &client)
 		if err != nil {
-			log.Printf("[ERROR] waiting for deployment: %s", err)
+			log.Printf(color.InRed("[ERROR] waiting for deployment: %s"), err)
 			return err
 		}
-		log.Printf(">>>> Created deployment %s\n", res.GetObjectMeta().GetName())
+		log.Printf(color.InGreen(">>>> Created deployment %s\n"), res.GetObjectMeta().GetName())
 		return nil
 	}
 	// Already created and return nil
-	log.Printf(">>>> Deployment HTTPD already exists. Skipping creation.")
+	log.Printf(color.InGreen(">>>> Deployment HTTPD already exists. Skipping creation."))
 	return nil
 }
 
 //Func to create a Route
 func (f *FileServer) createRoute(ctx context.Context, client routev1.RouteV1Client, dynamicclient dynamic.Interface) error {
 	if _, err := f.verifyRoute(ctx, client); err != nil {
-		log.Println(">>>> Creating route HTTPD")
+		log.Println(color.InBold(color.InYellow(">>>> Creating route HTTPD")))
 		route := apiroutev1.Route{
 			ObjectMeta: metav1.ObjectMeta{
 				Labels: map[string]string{
@@ -175,25 +176,26 @@ func (f *FileServer) createRoute(ctx context.Context, client routev1.RouteV1Clie
 		}
 		res, err := client.Routes(HTTPD_NAMESPACE).Create(ctx, &route, metav1.CreateOptions{})
 		if err != nil {
-			log.Printf("Error creating route: %e", err)
+			log.Printf(color.InRed("Error creating route: %e"), err)
 			return err
 		}
 		err = resources.WaitForRoute(ctx, &client, res)
 		if err != nil {
-			log.Printf("[ERROR] waiting for route: %s", err)
+			log.Printf(color.InRed("[ERROR] waiting for route: %s"), err)
 			return err
 		}
-		log.Printf(">>>> Created route %s\n", res.GetObjectMeta().GetName())
+		log.Printf(color.InGreen(">>>> Created route %s\n"), res.GetObjectMeta().GetName())
 		return nil
 	}
-
+	// Already created and return nil
+	log.Printf(color.InGreen(">>>> Route for HTTPD already exists. Skipping creation."))
 	return nil
 }
 
 //Func to create a Service
 func (f *FileServer) createService(ctx context.Context, client kubernetes.Clientset) error {
 	if _, err := f.verifyService(ctx, client); err != nil {
-		log.Println(">>>> Creating Service HTTPD")
+		log.Println(color.InBold(color.InYellow(">>>> Creating Service HTTPD")))
 		var svcPorts []apiv1.ServicePort
 		svcPort := apiv1.ServicePort{
 			Protocol: "TCP",
@@ -219,24 +221,25 @@ func (f *FileServer) createService(ctx context.Context, client kubernetes.Client
 		}
 		res, err := client.CoreV1().Services(HTTPD_NAMESPACE).Create(ctx, service, metav1.CreateOptions{})
 		if err != nil {
-			log.Printf("Error creating Service: %e", err)
+			log.Printf(color.InRed("Error creating Service: %e"), err)
 			return err
 		}
 		err = resources.WaitForService(ctx, &client, res)
 		if err != nil {
-			log.Printf("[ERROR] waiting for Service: %s", err)
+			log.Printf(color.InRed("[ERROR] waiting for Service: %s"), err)
 			return err
 		}
-		log.Printf(">>>> Created Service %s\n", res.GetObjectMeta().GetName())
+		log.Printf(color.InGreen(">>>> Created Service %s\n"), res.GetObjectMeta().GetName())
 		return nil
 	}
-
+	// Already created and return nil
+	log.Printf(color.InGreen(">>>> Service  HTTPD already exists. Skipping creation."))
 	return nil
 }
 
 func (f *FileServer) createPVC(ctx context.Context, client kubernetes.Clientset) error {
 	if _, err := f.verifyPVC(ctx, client); err != nil {
-		log.Println(">>>> Creating Service HTTPD")
+		log.Println(color.InBold(color.InYellow(">>>> Creating Service HTTPD")))
 		pvc := &apiv1.PersistentVolumeClaim{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "httpd-pv-claim",
@@ -252,17 +255,19 @@ func (f *FileServer) createPVC(ctx context.Context, client kubernetes.Clientset)
 		}
 		res, err := client.CoreV1().PersistentVolumeClaims(HTTPD_NAMESPACE).Create(ctx, pvc, metav1.CreateOptions{})
 		if err != nil {
-			log.Printf("Error creating Pvc: %e", err)
+			log.Printf(color.InRed("Error creating Pvc: %e"), err)
 			return err
 		}
 		err = resources.WaitForPVC(ctx, &client, res)
 		if err != nil {
-			log.Printf("[ERROR] waiting for Pvc: %s", err)
+			log.Printf(color.InRed("[ERROR] waiting for Pvc: %s"), err)
 			return err
 		}
-		log.Printf(">>>> Created Pvc %s\n", res.GetObjectMeta().GetName())
+		log.Printf(color.InGreen(">>>> Created Pvc %s\n"), res.GetObjectMeta().GetName())
 		return nil
 	}
+	// Already created and return nil
+	log.Printf(color.InGreen(">>>> PVC for  HTTPD already exists. Skipping creation."))
 	return nil
 }
 

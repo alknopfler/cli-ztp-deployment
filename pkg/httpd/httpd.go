@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	jsonvalue "github.com/Andrew-M-C/go.jsonvalue"
+	"github.com/TwiN/go-color"
 	"github.com/alknopfler/cli-ztp-deployment/config"
 	"github.com/alknopfler/cli-ztp-deployment/pkg/auth"
 	"github.com/alknopfler/cli-ztp-deployment/pkg/resources"
@@ -54,7 +55,8 @@ func NewFileServerDefault() *FileServer {
 func GetDomainFromCluster(client dynamic.Interface, ctx context.Context) string {
 	d, err := resources.NewGenericGet(ctx, client, INGRESS_CONTROLLER_GROUP, INGRESS_CONTROLLER_VERSION, INGRESS_CONTROLLER_KIND, INGRESS_CONTROLLER_NS, INGRESS_CONTROLLER_NAME, INGRESS_CONTROLLER_JQPATH).GetResourceByJq()
 	if err != nil {
-		log.Fatalf("[ERROR] Getting resources in GetDomainFromCluster: %e", err)
+		log.Printf(color.InRed("[ERROR] Getting resources in GetDomainFromCluster: "), err)
+		return "[ERROR GETTING DOMAIN]"
 	}
 	b, _ := json.Marshal(d)
 	value := jsonvalue.MustUnmarshal(b)

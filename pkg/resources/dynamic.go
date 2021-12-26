@@ -2,13 +2,14 @@ package resources
 
 import (
 	"context"
-	"fmt"
+	"github.com/TwiN/go-color"
 	"github.com/itchyny/gojq"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic"
+	"log"
 )
 
 type Generic struct {
@@ -121,20 +122,20 @@ func (g *Generic) GetResourceByJq() (unstructured.Unstructured, error) {
 
 	query, err := gojq.Parse(g.Jq)
 	if err != nil {
-		fmt.Println("[ERROR] Error parsing jq: ", err)
+		log.Printf(color.InRed("[ERROR] Error parsing jq: %e"), err)
 		return unstructured.Unstructured{}, err
 	}
 
 	item, err := g.GetResourceDynamically()
 	if err != nil {
-		fmt.Println("[ERROR] Error getting resource: ", err)
+		log.Printf(color.InRed("[ERROR] Error getting resource: %e"), err)
 		return unstructured.Unstructured{}, err
 	}
 
 	var rawJson interface{}
 	err = runtime.DefaultUnstructuredConverter.FromUnstructured(item.Object, &rawJson)
 	if err != nil {
-		fmt.Println("[ERROR] Error converting resource to JSON: ", err)
+		log.Printf(color.InRed("[ERROR] Error converting resource to JSON: %e"), err)
 		return unstructured.Unstructured{}, err
 	}
 
@@ -143,12 +144,12 @@ func (g *Generic) GetResourceByJq() (unstructured.Unstructured, error) {
 	for {
 		result, ok := iter.Next()
 		if !ok {
-			fmt.Println("[ERROR] Error evaluating jq: ", err)
+			log.Printf(color.InRed("[ERROR] Error evaluating jq: %e"), err)
 			return unstructured.Unstructured{}, err
 		}
 		if err, ok := result.(error); ok {
 			if err != nil {
-				fmt.Println("[ERROR] Error evaluating jq to get result: ", err)
+				log.Printf(color.InRed("[ERROR] Error evaluating jq to get result: %e"), err)
 				return unstructured.Unstructured{}, err
 			}
 		} else {

@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"github.com/TwiN/go-color"
 
 	"os"
 
@@ -96,29 +97,29 @@ func NewConfig() (ZTPConfig, error) {
 //ReadFromConfigFile reads the config file
 func (c *ZTPConfig) ReadFromConfigFile() error {
 	if getEnv("ZTP_CONFIGFILE") == "" {
-		fmt.Errorf("ZTP_CONFIGFILE not set", "")
+		fmt.Errorf(color.InRed("ZTP_CONFIGFILE not set"), "ZTP_CONFIGFILE not set")
 	}
 
 	if getEnv("ZTP_CONFIGFILE") != "" {
-		fmt.Println(">>>> ConfigFile env is not empty. Reading file from this env")
+		fmt.Println(color.InYellow(">>>> ConfigFile env is not empty. Reading file from this env"))
 		c.Config.ConfigFile = getEnv("ZTP_CONFIGFILE")
 	} else {
-		fmt.Println(">>>> ZTP_CONFIGFILE env var is empty. Using default path: " + DEFAULT_CONFIG_FILE)
+		fmt.Println(color.InYellow(">>>> ZTP_CONFIGFILE env var is empty. Using default path: " + DEFAULT_CONFIG_FILE))
 		c.Config.ConfigFile = DEFAULT_CONFIG_FILE
 	}
 
 	f, err := os.Open(c.Config.ConfigFile)
 	if err != nil {
-		return fmt.Errorf("opening config file %s: %v", c.Config.ConfigFile, err)
+		return fmt.Errorf(color.InRed("opening config file %s: %v"), c.Config.ConfigFile, err)
 	}
 	defer f.Close()
 
 	decoder := yaml.NewDecoder(f)
 	if err := decoder.Decode(c); err != nil {
-		return fmt.Errorf("decoding config file %s: %v", c.Config.ConfigFile, err)
+		return fmt.Errorf(color.InRed("decoding config file %s: %v"), c.Config.ConfigFile, err)
 	}
 	if getEnv("KUBECONFIG") == "" {
-		return fmt.Errorf("Kubeconfig env empty", "")
+		return fmt.Errorf(color.InRed("Kubeconfig env empty"), "")
 	}
 	c.Config.KubeconfigHUB = getEnv("KUBECONFIG")
 
