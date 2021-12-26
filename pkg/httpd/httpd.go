@@ -2,9 +2,13 @@ package httpd
 
 import (
 	"context"
+	"encoding/json"
+	jsonvalue "github.com/Andrew-M-C/go.jsonvalue"
 	"github.com/alknopfler/cli-ztp-deployment/config"
 	"github.com/alknopfler/cli-ztp-deployment/pkg/auth"
-	"github.com/alknopfler/cli-ztp-deployment/pkg/utils"
+	"github.com/alknopfler/cli-ztp-deployment/pkg/resources"
+	"k8s.io/client-go/dynamic"
+	"log"
 	"sync"
 )
 
@@ -44,8 +48,20 @@ func NewFileServerDefault() *FileServer {
 	return &FileServer{
 		MountPath:  DEFAULT_MOUNT_PATH,
 		Size:       DEFAULT_SIZE,
-		Domain:     utils.GetDomainFromCluster(client, ctx),
+		Domain:     GetDomainFromCluster(client, ctx),
 		Port:       DEFAULT_PORT,
 		TargetPort: DEFAULT_TARGETPORT,
 	}
+}
+
+func GetDomainFromCluster(client dynamic.Interface, ctx context.Context) string {
+	d, err := resources.NewGenericGet(ctx, client, INGRESS_CONTROLLER_GROUP, INGRESS_CONTROLLER_VERSION, INGRESS_CONTROLLER_KIND, INGRESS_CONTROLLER_NS, INGRESS_CONTROLLER_NAME, INGRESS_CONTROLLER_JQPATH).GetResourceByJq()
+	if err != nil {
+		log.Fatalf("[ERROR] Getting resources in GetDomainFromCluster: %e", err)
+	}
+	b, _ := json.Marshal(d)
+	value := jsonvalue.MustUnmarshal(b)
+	domain, _ := value.Get("Object", "status", "domain")
+
+	return domain.String()
 }
