@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/alknopfler/cli-ztp-deployment/config"
 	"github.com/alknopfler/cli-ztp-deployment/pkg/auth"
+	"github.com/alknopfler/cli-ztp-deployment/pkg/resources"
 	"sync"
 )
 
@@ -43,7 +44,7 @@ func NewFileServerDefault() *FileServer {
 	return &FileServer{
 		MountPath:  DEFAULT_MOUNT_PATH,
 		Size:       DEFAULT_SIZE,
-		Domain:     getDomainFromCluster(client, ctx),
+		Domain:     resources.GetDomainFromCluster(client, ctx),
 		Port:       DEFAULT_PORT,
 		TargetPort: DEFAULT_TARGETPORT,
 	}

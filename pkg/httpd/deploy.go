@@ -2,8 +2,8 @@ package httpd
 
 import (
 	"context"
-	"encoding/json"
-	jsonvalue "github.com/Andrew-M-C/go.jsonvalue"
+	"k8s.io/apimachinery/pkg/api/resource"
+
 	"github.com/alknopfler/cli-ztp-deployment/config"
 	"github.com/alknopfler/cli-ztp-deployment/pkg/auth"
 	"github.com/alknopfler/cli-ztp-deployment/pkg/resources"
@@ -152,7 +152,7 @@ func (f *FileServer) createRoute(ctx context.Context, client routev1.RouteV1Clie
 				Namespace: HTTPD_NAMESPACE,
 			},
 			Spec: apiroutev1.RouteSpec{
-				Host: "httpd-server" + getDomainFromCluster(dynamicclient, ctx),
+				Host: "httpd-server" + resources.GetDomainFromCluster(dynamicclient, ctx),
 				Port: &apiroutev1.RoutePort{
 					TargetPort: intstr.IntOrString{
 						Type:   DEFAULT_TARGETPORT,
@@ -215,15 +215,15 @@ func (f *FileServer) createService(ctx context.Context, client kubernetes.Client
 		}
 		res, err := client.CoreV1().Services(HTTPD_NAMESPACE).Create(ctx, service, metav1.CreateOptions{})
 		if err != nil {
-			log.Printf("Error creating route: %e", err)
+			log.Printf("Error creating Service: %e", err)
 			return err
 		}
 		err = resources.WaitForService(ctx, &client, res)
 		if err != nil {
-			log.Printf("[ERROR] waiting for route: %s", err)
+			log.Printf("[ERROR] waiting for Service: %s", err)
 			return err
 		}
-		log.Printf(">>>> Created route %s\n", res.GetObjectMeta().GetName())
+		log.Printf(">>>> Created Service %s\n", res.GetObjectMeta().GetName())
 		return nil
 	}
 
@@ -232,20 +232,35 @@ func (f *FileServer) createService(ctx context.Context, client kubernetes.Client
 
 func (f *FileServer) createPVC(ctx context.Context, client kubernetes.Clientset) error {
 	defer wg.Done()
-
-	return nil
-}
-
-func getDomainFromCluster(client dynamic.Interface, ctx context.Context) string {
-	d, err := resources.NewGenericGet(ctx, client, INGRESS_CONTROLLER_GROUP, INGRESS_CONTROLLER_VERSION, INGRESS_CONTROLLER_KIND, INGRESS_CONTROLLER_NS, INGRESS_CONTROLLER_NAME, INGRESS_CONTROLLER_JQPATH).GetResourceByJq()
-	if err != nil {
-		log.Fatalf("[ERROR] Getting resources in GetDomainFromCluster: %e", err)
+	if _, err := f.verifyPVC(ctx, client); err != nil {
+		log.Println(">>>> Creating Service HTTPD")
+		pvc := &apiv1.PersistentVolumeClaim{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "httpd-pv-claim",
+			},
+			Spec: apiv1.PersistentVolumeClaimSpec{
+				AccessModes: []apiv1.PersistentVolumeAccessMode{apiv1.ReadWriteOnce},
+				Resources: apiv1.ResourceRequirements{
+					Requests: apiv1.ResourceList{
+						apiv1.ResourceName(apiv1.ResourceStorage): resource.MustParse("5Gi"),
+					},
+				},
+			},
+		}
+		res, err := client.CoreV1().PersistentVolumeClaims(HTTPD_NAMESPACE).Create(ctx, pvc, metav1.CreateOptions{})
+		if err != nil {
+			log.Printf("Error creating Pvc: %e", err)
+			return err
+		}
+		err = resources.WaitForPVC(ctx, &client, res)
+		if err != nil {
+			log.Printf("[ERROR] waiting for Pvc: %s", err)
+			return err
+		}
+		log.Printf(">>>> Created Pvc %s\n", res.GetObjectMeta().GetName())
+		return nil
 	}
-	b, _ := json.Marshal(d)
-	value := jsonvalue.MustUnmarshal(b)
-	domain, _ := value.Get("Object", "status", "domain")
-
-	return domain.String()
+	return nil
 }
 
 func int32Ptr(i int32) *int32 { return &i }
