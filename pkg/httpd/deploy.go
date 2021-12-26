@@ -70,22 +70,22 @@ func (f *FileServer) createDeployment(ctx context.Context, client kubernetes.Cli
 		log.Println(">>>> Creating deployment HTTPD")
 		deployment := &appsv1.Deployment{
 			ObjectMeta: metav1.ObjectMeta{
-				Name: "nginx",
+				Name: HTTPD_DEPLOYMENT_NAME,
 				Labels: map[string]string{
-					"app": "nginx",
+					"app": HTTPD_DEPLOYMENT_NAME,
 				},
 			},
 			Spec: appsv1.DeploymentSpec{
 				Replicas: int32Ptr(2),
 				Selector: &metav1.LabelSelector{
 					MatchLabels: map[string]string{
-						"app": "nginx",
+						"app": HTTPD_DEPLOYMENT_NAME,
 					},
 				},
 				Template: apiv1.PodTemplateSpec{
 					ObjectMeta: metav1.ObjectMeta{
 						Labels: map[string]string{
-							"app": "nginx",
+							"app": HTTPD_DEPLOYMENT_NAME,
 						},
 					},
 					Spec: apiv1.PodSpec{
