@@ -73,7 +73,7 @@ func (f *FileServer) RunDeployHttpd() error {
 //Func to create deployment
 func (f *FileServer) createDeployment(ctx context.Context, client kubernetes.Clientset) error {
 	if _, err := f.verifyDeployment(ctx, client); err != nil {
-		log.Println(">>>> Creating deployment HTTPD")
+		log.Println(">>>> Not found. Creating deployment HTTPD")
 		deployment := &appsv1.Deployment{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: HTTPD_DEPLOYMENT_NAME,

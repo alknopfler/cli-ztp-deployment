@@ -8,7 +8,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
+
 	"log"
+
 	"sync"
 )
 
@@ -44,26 +46,26 @@ func (p *Preflight) verifyPVS(clientset kubernetes.Clientset, ctx context.Contex
 	defer wg.Done()
 	pvs, err := clientset.CoreV1().PersistentVolumes().List(ctx, metav1.ListOptions{})
 	if err != nil {
-		log.Fatal(err)
+		log.Printf("[ERROR] Error getting the PV info: %e", err)
 	}
 
 	if len(pvs.Items) < 3 {
-		log.Fatal("[ERROR] PV insufficients...Exiting")
+		log.Println("[ERROR] PV insufficients...")
 	}
-	log.Println(">>>> Pvs validated")
+	log.Println(">>>>[OK] Pvs validated")
 }
 
 func (p *Preflight) verifyNodes(clientset kubernetes.Clientset, ctx context.Context) {
 	defer wg.Done()
 	nodes, err := clientset.CoreV1().Nodes().List(ctx, metav1.ListOptions{})
 	if err != nil {
-		log.Fatal("[ERROR] ", err)
+		log.Printf("[ERROR] Error getting Nodes info: %e", err)
 	}
 
 	if len(nodes.Items) < 3 {
-		log.Fatal("[ERROR] nodes insufficient...Exiting")
+		log.Println("[ERROR] Nodes insufficient.")
 	}
-	log.Println(">>>> Nodes validated")
+	log.Println(">>>>[OK] Nodes validated")
 }
 
 func (p *Preflight) verifyClusterOperators(client dynamic.Interface, ctx context.Context) {

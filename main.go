@@ -1,30 +1,30 @@
 package main
 
 import (
+	"github.com/TwiN/go-color"
 	"github.com/alknopfler/cli-ztp-deployment/cmd"
 	"github.com/alknopfler/cli-ztp-deployment/config"
 	"github.com/spf13/cobra"
 	"log"
 	"os"
-	"runtime"
 )
 
-func main() {
+func init() {
 
 	//Load config from file to set globally
 	var err error
 	config.Ztp, err = config.NewConfig()
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal(color.InRed(err.Error()))
+
 	}
 
-	if len(os.Getenv("GOMAXPROCS")) == 0 {
-		runtime.GOMAXPROCS(runtime.NumCPU())
-	}
+}
 
+func main() {
 	command := newCommand()
 	if err := command.Execute(); err != nil {
-		log.Fatalf("[ERROR] %e", err)
+		log.Fatalf(color.InRed("[ERROR] %e"), err)
 	}
 }
 
@@ -40,7 +40,6 @@ func newCommand() *cobra.Command {
 
 	c.AddCommand(cmd.NewVerify())
 	c.AddCommand(cmd.NewDeploy())
-	//c.AddCommand(cmd.NewWaitFor())
 
 	return c
 }
