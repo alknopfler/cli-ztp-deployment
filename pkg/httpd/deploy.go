@@ -3,6 +3,7 @@ package httpd
 import (
 	"context"
 	"k8s.io/apimachinery/pkg/api/resource"
+	"sync"
 
 	"github.com/alknopfler/cli-ztp-deployment/config"
 	"github.com/alknopfler/cli-ztp-deployment/pkg/auth"
@@ -19,6 +20,8 @@ import (
 	"log"
 )
 
+var wgDeployHTTPD sync.WaitGroup
+
 func (f *FileServer) RunDeployHttpd() error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -26,9 +29,10 @@ func (f *FileServer) RunDeployHttpd() error {
 	dynamicClient := auth.NewZTPAuth(config.Ztp.Config.KubeconfigHUB).GetAuthWithGeneric()
 	ocpclient := auth.NewZTPAuth(config.Ztp.Config.KubeconfigHUB).GetRouteAuth()
 
-	wg.Add(4)
+	wgDeployHTTPD.Add(4)
 	go func() error {
 		err := f.createDeployment(ctx, *client)
+		wgDeployHTTPD.Done()
 		if err != nil {
 			log.Fatalf("Error creating deployment: %v", err)
 			return err
@@ -37,6 +41,7 @@ func (f *FileServer) RunDeployHttpd() error {
 	}()
 	go func() error {
 		err := f.createService(ctx, *client)
+		wgDeployHTTPD.Done()
 		if err != nil {
 			log.Fatalf("Error creating service: %v", err)
 			return err
@@ -45,6 +50,7 @@ func (f *FileServer) RunDeployHttpd() error {
 	}()
 	go func() error {
 		err := f.createRoute(ctx, *ocpclient, dynamicClient)
+		wgDeployHTTPD.Done()
 		if err != nil {
 			log.Fatalf("Error creating route: %v", err)
 			return err
@@ -53,19 +59,19 @@ func (f *FileServer) RunDeployHttpd() error {
 	}()
 	go func() error {
 		err := f.createPVC(ctx, *client)
+		wgDeployHTTPD.Done()
 		if err != nil {
 			log.Fatalf("Error creating PVC: %v", err)
 			return err
 		}
 		return nil
 	}()
-	wg.Wait()
+	wgDeployHTTPD.Wait()
 	return nil
 }
 
 //Func to create deployment
 func (f *FileServer) createDeployment(ctx context.Context, client kubernetes.Clientset) error {
-	defer wg.Done()
 	if _, err := f.verifyDeployment(ctx, client); err != nil {
 		log.Println(">>>> Creating deployment HTTPD")
 		deployment := &appsv1.Deployment{
@@ -140,7 +146,6 @@ func (f *FileServer) createDeployment(ctx context.Context, client kubernetes.Cli
 
 //Func to create a Route
 func (f *FileServer) createRoute(ctx context.Context, client routev1.RouteV1Client, dynamicclient dynamic.Interface) error {
-	defer wg.Done()
 	if _, err := f.verifyRoute(ctx, client); err != nil {
 		log.Println(">>>> Creating route HTTPD")
 		route := apiroutev1.Route{
@@ -187,7 +192,6 @@ func (f *FileServer) createRoute(ctx context.Context, client routev1.RouteV1Clie
 
 //Func to create a Service
 func (f *FileServer) createService(ctx context.Context, client kubernetes.Clientset) error {
-	defer wg.Done()
 	if _, err := f.verifyService(ctx, client); err != nil {
 		log.Println(">>>> Creating Service HTTPD")
 		var svcPorts []apiv1.ServicePort
@@ -231,7 +235,6 @@ func (f *FileServer) createService(ctx context.Context, client kubernetes.Client
 }
 
 func (f *FileServer) createPVC(ctx context.Context, client kubernetes.Clientset) error {
-	defer wg.Done()
 	if _, err := f.verifyPVC(ctx, client); err != nil {
 		log.Println(">>>> Creating Service HTTPD")
 		pvc := &apiv1.PersistentVolumeClaim{

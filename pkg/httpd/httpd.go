@@ -9,7 +9,6 @@ import (
 	"github.com/alknopfler/cli-ztp-deployment/pkg/resources"
 	"k8s.io/client-go/dynamic"
 	"log"
-	"sync"
 )
 
 const (
@@ -27,8 +26,6 @@ const (
 	HTTPD_PVC_NAME             = "httpd-pv-claim"
 	HTTPD_DEPLOYMENT_NAME      = "nginx"
 )
-
-var wg sync.WaitGroup
 
 //type FileServer
 type FileServer struct {
