@@ -274,3 +274,5 @@ func (f *FileServer) createPVC(ctx context.Context, client kubernetes.Clientset)
 }
 
 func int32Ptr(i int32) *int32 { return &i }
+
+//TODO change all string to constant

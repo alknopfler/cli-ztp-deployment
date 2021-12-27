@@ -78,14 +78,14 @@ func (f *FileServer) verifyDeployment(ctx context.Context, client kubernetes.Cli
 	if err != nil {
 		return false, err
 	}
-	if deployment.Status.AvailableReplicas != 1 {
+	if deployment.Status.AvailableReplicas < 1 {
 		return true, errors.New(color.InRed("[ERROR] Deployment is not ready, replicas available insufficent"))
 	}
 	return true, nil
 }
 
 func (f *FileServer) verifyRoute(ctx context.Context, client routev1.RouteV1Client) (found bool, err error) {
-	route, err := client.Routes(HTTPD_NAMESPACE).Get(ctx, "nginx", metav1.GetOptions{})
+	route, err := client.Routes(HTTPD_NAMESPACE).Get(ctx, "httpd-server-route", metav1.GetOptions{})
 	if err != nil {
 		return false, err
 	}
@@ -96,7 +96,7 @@ func (f *FileServer) verifyRoute(ctx context.Context, client routev1.RouteV1Clie
 }
 
 func (f *FileServer) verifyService(ctx context.Context, client kubernetes.Clientset) (found bool, err error) {
-	service, err := client.CoreV1().Services(HTTPD_NAMESPACE).Get(ctx, "nginx", metav1.GetOptions{})
+	service, err := client.CoreV1().Services(HTTPD_NAMESPACE).Get(ctx, "httpd-server-service", metav1.GetOptions{})
 	if err != nil {
 		return false, err
 	}
@@ -107,7 +107,7 @@ func (f *FileServer) verifyService(ctx context.Context, client kubernetes.Client
 }
 
 func (f *FileServer) verifyPVC(ctx context.Context, client kubernetes.Clientset) (found bool, err error) {
-	pvc, err := client.CoreV1().PersistentVolumeClaims(HTTPD_NAMESPACE).Get(ctx, HTTPD_PVC_NAME, metav1.GetOptions{})
+	pvc, err := client.CoreV1().PersistentVolumeClaims(HTTPD_NAMESPACE).Get(ctx, "httpd-pv-claim", metav1.GetOptions{})
 	if err != nil {
 		return false, err
 	}
@@ -116,3 +116,5 @@ func (f *FileServer) verifyPVC(ctx context.Context, client kubernetes.Clientset)
 	}
 	return true, nil
 }
+
+//TODO change all string to constant
