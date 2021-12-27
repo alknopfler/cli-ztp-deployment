@@ -15,6 +15,7 @@ func init() {
 	var err error
 	config.Ztp, err = config.NewConfig()
 	if err != nil {
+		//There is some error in config file or creating the config ZTP.
 		log.Fatal(color.InRed(err.Error()))
 
 	}

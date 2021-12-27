@@ -3,7 +3,6 @@ package config
 import (
 	"fmt"
 	"github.com/TwiN/go-color"
-
 	"os"
 
 	"gopkg.in/yaml.v2"
@@ -22,20 +21,32 @@ var (
 
 const (
 	DEFAULT_CONFIG_FILE = "./config.yaml"
+	MODE_HUB            = "hub"
+	MODE_SPOKE          = "spoke"
 )
 
 //ZTPConfig is the global configuration data model
 type ZTPConfig struct {
 	Config struct {
-		ConfigFile       string
-		Clusterimageset  string `yaml:"clusterimageset"`
-		KubeconfigHUB    string
-		KubeframeNS      string
-		OC_OCP_VERSION   string `yaml:"OC_OCP_VERSION"`
-		OC_OCP_TAG       string `yaml:"OC_OCP_TAG"`
-		OC_RHCOS_RELEASE string `yaml:"OC_RHCOS_RELEASE"`
-		OC_ACM_VERSION   string `yaml:"OC_ACM_VERSION"`
-		OC_OCS_VERSION   string `yaml:"OC_OCS_VERSION"`
+		ConfigFile                      string
+		KubeconfigHUB                   string
+		KubeframeNS                     string
+		RegistryNamespace               string
+		RegistryConfigFile              string
+		RegistrySourcePackages          string
+		RegistrySourcePackagesFormatted string
+		RegistryExtraImages             string
+		RegistryUser                    string
+		RegistryPassword                string
+		OcDisCatalog                    string
+		MarketNS                        string
+		OcpReleaseFull                  string
+		Clusterimageset                 string `yaml:"clusterimageset"`
+		OcOCPVersion                    string `yaml:"OC_OCP_VERSION"`
+		OcOCPTag                        string `yaml:"OC_OCP_TAG"`
+		OcRHCOSRelease                  string `yaml:"OC_RHCOS_RELEASE"`
+		OcACMVersion                    string `yaml:"OC_ACM_VERSION"`
+		OcOCSVersion                    string `yaml:"OC_OCS_VERSION"`
 	} `yaml:"config"`
 	Spokes []struct {
 		Name            string `yaml:"name"`
@@ -87,17 +98,39 @@ type ZTPConfig struct {
 
 //Constructor new config file from file
 func NewConfig() (ZTPConfig, error) {
+	//Read main config from the config file
 	err := Ztp.ReadFromConfigFile()
 	if err != nil {
 		return Ztp, err
 	}
+
+	// Set the rest of config from env
+	if getEnv("KUBECONFIG") == "" {
+		return Ztp, fmt.Errorf(color.InRed("Kubeconfig env empty"), "")
+	}
+
+	// Set the registry commons config
+	Ztp.Config.KubeconfigHUB = getEnv("KUBECONFIG")
+	Ztp.Config.KubeframeNS = "kubeframe"
+	Ztp.Config.OcDisCatalog = "kubeframe-catalog"
+	Ztp.Config.MarketNS = "openshift-marketplace"
+	Ztp.Config.OcpReleaseFull = Ztp.Config.OcOCPVersion + ".0"
+	Ztp.Config.RegistryNamespace = "kubeframe-registry"
+	Ztp.Config.RegistryConfigFile = "./registry/confg-reg.yml"
+	Ztp.Config.RegistrySourcePackages = "kubernetes-nmstate-operator,metallb-operator,ocs-operator,local-storage-operator,advanced-cluster-management"
+	Ztp.Config.RegistrySourcePackagesFormatted = "kubernetes-nmstate-operator metallb-operator ocs-operator local-storage-operator advanced-cluster-management"
+	Ztp.Config.RegistryExtraImages = "quay.io/jparrill/registry:2"
+	Ztp.Config.RegistryUser = "dummy"
+	Ztp.Config.RegistryPassword = "dummy"
+
 	return Ztp, nil
 }
 
 //ReadFromConfigFile reads the config file
 func (c *ZTPConfig) ReadFromConfigFile() error {
 	if getEnv("ZTP_CONFIGFILE") == "" {
-		fmt.Errorf(color.InRed("ZTP_CONFIGFILE not set"), "ZTP_CONFIGFILE not set")
+		fmt.Println(color.InRed("ZTP_CONFIGFILE not set"))
+		return fmt.Errorf("ZTP_CONFIGFILE not set")
 	}
 
 	if getEnv("ZTP_CONFIGFILE") != "" {
@@ -118,15 +151,25 @@ func (c *ZTPConfig) ReadFromConfigFile() error {
 	if err := decoder.Decode(c); err != nil {
 		return fmt.Errorf(color.InRed("decoding config file %s: %v"), c.Config.ConfigFile, err)
 	}
-	if getEnv("KUBECONFIG") == "" {
-		return fmt.Errorf(color.InRed("Kubeconfig env empty"), "")
-	}
-	c.Config.KubeconfigHUB = getEnv("KUBECONFIG")
-
 	return nil
 }
 
 //getEnv returns the value of the environment variable named by the key.
 func getEnv(key string) string {
 	return os.Getenv(key)
+}
+
+func GetKubeconfigFromMode(mode string) string {
+	if isHub(mode) {
+		return Ztp.Config.KubeconfigHUB
+	}
+	return Ztp.Spokes[0].KubeconfigSPOKE
+}
+
+func isHub(mode string) bool {
+	return mode == MODE_HUB
+}
+
+func isSpoke(mode string) bool {
+	return mode == MODE_SPOKE
 }

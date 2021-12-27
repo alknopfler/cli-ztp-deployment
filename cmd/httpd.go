@@ -23,7 +23,7 @@ func NewVerifyHTTPD() *cobra.Command {
 	var f *httpd.FileServer
 	cmd := &cobra.Command{
 		Use:   "httpd",
-		Short: "Deploy new File Server running on the hub cluster ",
+		Short: "Verify if File Server is running on the hub cluster ",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			f = httpd.NewFileServerDefault()
 			f.RunVerifyHttpd()
