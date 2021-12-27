@@ -18,6 +18,11 @@ type Registry struct {
 	RegistryPass            string
 	RegistrySecretHash      string
 	RegistrySecretName      string
+	RegistryConfigMapName   string
+	RegistryDeploymentName  string
+	RegistryServiceName     string
+	RegistryRouteName       string
+	RegistryPVCName         string
 }
 
 //Constructor NewFileServer
@@ -29,7 +34,7 @@ func NewRegistry(mode string) *Registry {
 		OcDisCatalog:            "kubeframe-catalog",
 		OcpReleaseFull:          config.Ztp.Config.OcOCPVersion + ".0",
 		RegistryNS:              "kubeframe-registry",
-		RegistryConfigFile:      "./registry/confg-reg.yml",
+		RegistryConfigFile:      "config.yml",
 		RegistrySrcPkg:          "kubernetes-nmstate-operator,metallb-operator,ocs-operator,local-storage-operator,advanced-cluster-management",
 		RegistrySrcPkgFormatted: "kubernetes-nmstate-operator metallb-operator ocs-operator local-storage-operator advanced-cluster-management",
 		RegistryExtraImages:     "quay.io/jparrill/registry:2",
@@ -37,5 +42,10 @@ func NewRegistry(mode string) *Registry {
 		RegistryPass:            "dummy",
 		RegistrySecretHash:      "dummy:$2y$05$VYlWo5DJrfSddVPrGWREwuuy8K.UgMoPoH2pSQpxPxwSiHrWbMa22",
 		RegistrySecretName:      "auth",
+		RegistryConfigMapName:   "registry-conf",
+		RegistryDeploymentName:  "kubeframe-registry",
+		RegistryServiceName:     "kubeframe-registry",
+		RegistryRouteName:       "kubeframe-registry",
+		RegistryPVCName:         "data-pvc",
 	}
 }

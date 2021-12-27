@@ -9,13 +9,18 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"log"
+	"sync"
 )
+
+var wgDeployRegistry sync.WaitGroup
 
 func (r *Registry) RunDeployRegistry() error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	//get client from kubeconfig extracted based on Mode (HUB or SPOKE)
 	client := auth.NewZTPAuth(config.GetKubeconfigFromMode(r.Mode)).GetAuth()
+	dynamicClient := auth.NewZTPAuth(config.Ztp.Config.KubeconfigHUB).GetAuthWithGeneric()
+	ocpclient := auth.NewZTPAuth(config.Ztp.Config.KubeconfigHUB).GetRouteAuth()
 
 	//Step 1 - Create the namespace for the registry
 	err := r.createNamespace(ctx, client)
@@ -34,6 +39,45 @@ func (r *Registry) RunDeployRegistry() error {
 		log.Printf(color.InRed("Error creating secret and config map for the registry: %v"), err)
 		return err
 	}
+	// Step 3 - Create the rest of the manifests for the registry. We'll use goroutines to do this
+	wgDeployRegistry.Add(4)
+	go func() error {
+		err := r.createDeployment(ctx, *client)
+		wgDeployRegistry.Done()
+		if err != nil {
+			log.Fatalf("Error creating deployment: %v", err)
+			return err
+		}
+		return nil
+	}()
+	go func() error {
+		err := r.createService(ctx, *client)
+		wgDeployRegistry.Done()
+		if err != nil {
+			log.Fatalf("Error creating service: %v", err)
+			return err
+		}
+		return nil
+	}()
+	go func() error {
+		err := r.createRoute(ctx, *ocpclient, dynamicClient)
+		wgDeployRegistry.Done()
+		if err != nil {
+			log.Fatalf("Error creating route: %v", err)
+			return err
+		}
+		return nil
+	}()
+	go func() error {
+		err := r.createPVC(ctx, *client)
+		wgDeployRegistry.Done()
+		if err != nil {
+			log.Fatalf("Error creating PVC: %v", err)
+			return err
+		}
+		return nil
+	}()
+	wgDeployRegistry.Wait()
 
 	return nil
 }
@@ -91,7 +135,7 @@ func (r *Registry) createConfigMap(ctx context.Context, client *kubernetes.Clien
 		//create config map
 		configMap := &coreV1.ConfigMap{
 			ObjectMeta: metav1.ObjectMeta{
-				Name: "registry-config",
+				Name: r.RegistryConfigMapName,
 			},
 			Data: map[string]string{
 				"config.yaml": `version: 0.1
