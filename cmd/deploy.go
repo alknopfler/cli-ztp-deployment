@@ -12,6 +12,7 @@ func NewDeploy() *cobra.Command {
 	}
 
 	c.AddCommand(NewDeployHTTPD())
+	c.AddCommand(NewDeployRegistry())
 
 	return c
 }
