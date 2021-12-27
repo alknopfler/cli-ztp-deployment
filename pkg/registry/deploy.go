@@ -94,28 +94,27 @@ func (r *Registry) createConfigMap(ctx context.Context, client *kubernetes.Clien
 				Name: "registry-config",
 			},
 			Data: map[string]string{
-				"config.yaml": `
-				version: 0.1
-				log:
-				  fields:
-				    service: registry
-				storage:
-				  cache:
-				    blobdescriptor: inmemory
-				  filesystem:
-				    rootdirectory: /var/lib/registry
-				http:
-				  addr: :5000
-				  headers:
-				    X-Content-Type-Options: [nosniff]
-				health:
-				  storagedriver:
-				    enabled: true
-				    interval: 10s
-				    threshold: 3
-				compatibility:
-				  schema1:
-				    enabled: true`,
+				"config.yaml": `version: 0.1
+log:
+  fields:
+    service: registry
+storage:
+  cache:
+    blobdescriptor: inmemory
+  filesystem:
+    rootdirectory: /var/lib/registry
+http:
+  addr: :5000
+  headers:
+    X-Content-Type-Options: [nosniff]
+health:
+  storagedriver:
+    enabled: true
+    interval: 10s
+    threshold: 3
+compatibility:
+  schema1:
+    enabled: true`,
 			},
 		}
 		_, err := client.CoreV1().ConfigMaps(r.RegistryNS).Create(ctx, configMap, metav1.CreateOptions{})
