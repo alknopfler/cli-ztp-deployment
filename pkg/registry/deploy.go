@@ -9,10 +9,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"log"
-	"sync"
 )
-
-var wgDeployRegistry sync.WaitGroup
 
 func (r *Registry) RunDeployRegistry() error {
 	ctx, cancel := context.WithCancel(context.Background())
@@ -97,7 +94,7 @@ func (r *Registry) createConfigMap(ctx context.Context, client *kubernetes.Clien
 				Name: "registry-config",
 			},
 			Data: map[string]string{
-				"registry-conf": string([]byte(`
+				"registry-conf": `
 				    version: 0.1
 					log:
 					  fields:
@@ -118,7 +115,7 @@ func (r *Registry) createConfigMap(ctx context.Context, client *kubernetes.Clien
 					    threshold: 3
 					compatibility:
 					  schema1:
-					    enabled: true`)),
+					    enabled: true`,
 			},
 		}
 		_, err := client.CoreV1().ConfigMaps(r.RegistryNS).Create(ctx, configMap, metav1.CreateOptions{})

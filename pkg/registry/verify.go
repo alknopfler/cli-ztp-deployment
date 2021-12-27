@@ -19,13 +19,31 @@ func (r *Registry) RunVerifyRegistry() {
 	defer cancel()
 	client := auth.NewZTPAuth(config.Ztp.Config.KubeconfigHUB).GetAuth()
 
-	wgVerifyRegistry.Add(4)
+	wgVerifyRegistry.Add(3)
 	go func() {
 		found, err := r.verifyNamespace(ctx, client)
 		if !found && err != nil {
 			log.Println(color.InRed("[ERROR] Namespace " + r.RegistryNS + " for registry not found"))
 		} else {
 			log.Println(color.InGreen("[OK] NameSpace " + r.RegistryNS + " for registry found"))
+		}
+		wgVerifyRegistry.Done()
+	}()
+	go func() {
+		found, err := r.verifySecret(ctx, client)
+		if !found && err != nil {
+			log.Println(color.InRed("[ERROR] Secret " + r.RegistrySecretName + " for registry not found"))
+		} else {
+			log.Println(color.InGreen("[OK] Secret " + r.RegistrySecretName + " for registry found"))
+		}
+		wgVerifyRegistry.Done()
+	}()
+	go func() {
+		found, err := r.verifyConfigMap(ctx, client)
+		if !found && err != nil {
+			log.Println(color.InRed("[ERROR] ConfigMap " + "registry-conf" + " for registry not found"))
+		} else {
+			log.Println(color.InGreen("[OK] Configmap " + "registry-conf" + " for registry found"))
 		}
 		wgVerifyRegistry.Done()
 	}()
