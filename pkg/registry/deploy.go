@@ -39,7 +39,7 @@ func (r *Registry) RunDeployRegistry() error {
 }
 
 func (r *Registry) createNamespace(ctx context.Context, client *kubernetes.Clientset) error {
-	if found, err := r.verifyNamespace(ctx, client); !found && err == nil {
+	if found, err := r.verifyNamespace(ctx, client); !found && err != nil {
 		log.Printf(color.InYellow("Namespace %s not found, Creating it..."), r.RegistryNS)
 		nsName := &coreV1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
@@ -60,7 +60,7 @@ func (r *Registry) createNamespace(ctx context.Context, client *kubernetes.Clien
 
 //Func to create the secret for the registry
 func (r *Registry) createSecret(ctx context.Context, client *kubernetes.Clientset) error {
-	if found, err := r.verifySecret(ctx, client); !found && err == nil {
+	if found, err := r.verifySecret(ctx, client); !found && err != nil {
 		log.Printf(color.InYellow("Secret and Config Map for the registry not found, Creating it..."))
 		//create secret
 		secret := &coreV1.Secret{
@@ -86,7 +86,7 @@ func (r *Registry) createSecret(ctx context.Context, client *kubernetes.Clientse
 
 //Func to create the config map for the registry
 func (r *Registry) createConfigMap(ctx context.Context, client *kubernetes.Clientset) error {
-	if found, err := r.verifyConfigMap(ctx, client); !found && err == nil {
+	if found, err := r.verifyConfigMap(ctx, client); !found && err != nil {
 		log.Printf(color.InYellow("Secret and Config Map for the registry not found, Creating it..."))
 		//create config map
 		configMap := &coreV1.ConfigMap{
