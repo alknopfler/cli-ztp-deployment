@@ -23,16 +23,34 @@ func (r *Registry) RunVerifyRegistry() {
 	go func() {
 		found, err := r.verifyNamespace(ctx, client)
 		if !found && err != nil {
-			log.Println(color.InRed("[ERROR] Namespace " + config.Ztp.Config.RegistryNamespace + " for registry not found"))
+			log.Println(color.InRed("[ERROR] Namespace " + r.RegistryNS + " for registry not found"))
 		} else {
-			log.Println(color.InGreen("[OK] NameSpace " + config.Ztp.Config.RegistryNamespace + " for registry found"))
+			log.Println(color.InGreen("[OK] NameSpace " + r.RegistryNS + " for registry found"))
 		}
 		wgVerifyRegistry.Done()
 	}()
 }
 
 func (r *Registry) verifyNamespace(ctx context.Context, client *kubernetes.Clientset) (bool, error) {
-	_, err := client.CoreV1().Namespaces().Get(ctx, config.Ztp.Config.RegistryNamespace, metav1.GetOptions{})
+	_, err := client.CoreV1().Namespaces().Get(ctx, r.RegistryNS, metav1.GetOptions{})
+	if err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
+//func to verify if the secret exists
+func (r *Registry) verifySecret(ctx context.Context, client *kubernetes.Clientset) (bool, error) {
+	_, err := client.CoreV1().Secrets(r.RegistryNS).Get(ctx, r.RegistrySecretName, metav1.GetOptions{})
+	if err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
+//func to verify if the configmap exists
+func (r *Registry) verifyConfigMap(ctx context.Context, client *kubernetes.Clientset) (bool, error) {
+	_, err := client.CoreV1().ConfigMaps(r.RegistryNS).Get(ctx, "registry-conf", metav1.GetOptions{})
 	if err != nil {
 		return false, err
 	}

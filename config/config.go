@@ -28,25 +28,14 @@ const (
 //ZTPConfig is the global configuration data model
 type ZTPConfig struct {
 	Config struct {
-		ConfigFile                      string
-		KubeconfigHUB                   string
-		KubeframeNS                     string
-		RegistryNamespace               string
-		RegistryConfigFile              string
-		RegistrySourcePackages          string
-		RegistrySourcePackagesFormatted string
-		RegistryExtraImages             string
-		RegistryUser                    string
-		RegistryPassword                string
-		OcDisCatalog                    string
-		MarketNS                        string
-		OcpReleaseFull                  string
-		Clusterimageset                 string `yaml:"clusterimageset"`
-		OcOCPVersion                    string `yaml:"OC_OCP_VERSION"`
-		OcOCPTag                        string `yaml:"OC_OCP_TAG"`
-		OcRHCOSRelease                  string `yaml:"OC_RHCOS_RELEASE"`
-		OcACMVersion                    string `yaml:"OC_ACM_VERSION"`
-		OcOCSVersion                    string `yaml:"OC_OCS_VERSION"`
+		ConfigFile      string
+		KubeconfigHUB   string
+		Clusterimageset string `yaml:"clusterimageset"`
+		OcOCPVersion    string `yaml:"OC_OCP_VERSION"`
+		OcOCPTag        string `yaml:"OC_OCP_TAG"`
+		OcRHCOSRelease  string `yaml:"OC_RHCOS_RELEASE"`
+		OcACMVersion    string `yaml:"OC_ACM_VERSION"`
+		OcOCSVersion    string `yaml:"OC_OCS_VERSION"`
 	} `yaml:"config"`
 	Spokes []struct {
 		Name            string `yaml:"name"`
@@ -103,26 +92,11 @@ func NewConfig() (ZTPConfig, error) {
 	if err != nil {
 		return Ztp, err
 	}
-
 	// Set the rest of config from env
 	if getEnv("KUBECONFIG") == "" {
 		return Ztp, fmt.Errorf(color.InRed("Kubeconfig env empty"), "")
 	}
-
-	// Set the registry commons config
 	Ztp.Config.KubeconfigHUB = getEnv("KUBECONFIG")
-	Ztp.Config.KubeframeNS = "kubeframe"
-	Ztp.Config.OcDisCatalog = "kubeframe-catalog"
-	Ztp.Config.MarketNS = "openshift-marketplace"
-	Ztp.Config.OcpReleaseFull = Ztp.Config.OcOCPVersion + ".0"
-	Ztp.Config.RegistryNamespace = "kubeframe-registry"
-	Ztp.Config.RegistryConfigFile = "./registry/confg-reg.yml"
-	Ztp.Config.RegistrySourcePackages = "kubernetes-nmstate-operator,metallb-operator,ocs-operator,local-storage-operator,advanced-cluster-management"
-	Ztp.Config.RegistrySourcePackagesFormatted = "kubernetes-nmstate-operator metallb-operator ocs-operator local-storage-operator advanced-cluster-management"
-	Ztp.Config.RegistryExtraImages = "quay.io/jparrill/registry:2"
-	Ztp.Config.RegistryUser = "dummy"
-	Ztp.Config.RegistryPassword = "dummy"
-
 	return Ztp, nil
 }
 
