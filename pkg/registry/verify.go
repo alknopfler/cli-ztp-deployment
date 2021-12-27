@@ -47,6 +47,7 @@ func (r *Registry) RunVerifyRegistry() {
 		}
 		wgVerifyRegistry.Done()
 	}()
+	wgVerifyRegistry.Wait()
 }
 
 func (r *Registry) verifyNamespace(ctx context.Context, client *kubernetes.Clientset) (bool, error) {
