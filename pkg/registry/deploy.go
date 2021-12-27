@@ -20,16 +20,11 @@ func (r *Registry) RunDeployRegistry() error {
 	//get client from kubeconfig extracted based on Mode (HUB or SPOKE)
 	client := auth.NewZTPAuth(config.GetKubeconfigFromMode(r.Mode)).GetAuth()
 
-	wgDeployRegistry.Add(4)
-	go func() error {
-		err := r.createNamespace(ctx, client)
-		wgDeployRegistry.Done()
-		if err != nil {
-			log.Fatalf("Error creating deployment: %v", err)
-			return err
-		}
-		return nil
-	}()
+	err := r.createNamespace(ctx, client)
+	if err != nil {
+		log.Fatalf("Error creating deployment: %v", err)
+		return err
+	}
 	return nil
 }
 
