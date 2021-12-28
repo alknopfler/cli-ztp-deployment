@@ -2,6 +2,8 @@ package registry
 
 import (
 	"context"
+	"crypto/x509"
+	"fmt"
 	"github.com/TwiN/go-color"
 	"github.com/alknopfler/cli-ztp-deployment/config"
 	"github.com/alknopfler/cli-ztp-deployment/pkg/auth"
@@ -17,6 +19,7 @@ import (
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	"log"
+	"os"
 	"sync"
 )
 
@@ -87,12 +90,17 @@ func (r *Registry) RunDeployRegistry() error {
 	}()
 	wgDeployRegistry.Wait()
 
+	err = r.updateTrustCA(ctx, client)
+	if err != nil {
+		log.Printf(color.InRed("Error updating the system CA with the new registry cert to be trusted: %v"), err)
+		return err
+	}
 	return nil
 }
 
 func (r *Registry) createNamespace(ctx context.Context, client *kubernetes.Clientset) error {
 	if found, err := r.verifyNamespace(ctx, client); !found && err != nil {
-		log.Printf(color.InYellow("Namespace %s not found, Creating it..."), r.RegistryNS)
+		log.Printf(color.InBold(color.InYellow("Namespace %s not found, Creating it...")), r.RegistryNS)
 		nsName := &coreV1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: r.RegistryNS,
@@ -139,7 +147,7 @@ func (r *Registry) createSecret(ctx context.Context, client *kubernetes.Clientse
 //Func to create the config map for the registry
 func (r *Registry) createConfigMap(ctx context.Context, client *kubernetes.Clientset) error {
 	if found, err := r.verifyConfigMap(ctx, client); !found && err != nil {
-		log.Printf(color.InYellow("Secret and Config Map for the registry not found, Creating it..."))
+		log.Printf(color.InBold(color.InYellow("Secret and Config Map for the registry not found, Creating it...")))
 		//create config map
 		configMap := &coreV1.ConfigMap{
 			ObjectMeta: metav1.ObjectMeta{
@@ -184,7 +192,7 @@ compatibility:
 //Func createDeployment to create the deployment for the registry
 func (r *Registry) createDeployment(ctx context.Context, client *kubernetes.Clientset) error {
 	if found, err := r.verifyDeployment(ctx, *client); !found && err != nil {
-		log.Printf(color.InYellow("Deployment for the registry not found, Creating it..."))
+		log.Printf(color.InBold(color.InYellow("Deployment for the registry not found, Creating it...")))
 		//create deployment
 		deployment := &appsv1.Deployment{
 			ObjectMeta: metav1.ObjectMeta{
@@ -327,7 +335,7 @@ func (r *Registry) createDeployment(ctx context.Context, client *kubernetes.Clie
 //Func createService to create the service for the registry
 func (r *Registry) createService(ctx context.Context, client *kubernetes.Clientset) error {
 	if found, err := r.verifyService(ctx, *client); err != nil && !found {
-		log.Println(color.InYellow(">>>> Service for the registry not found. Creating Service Registry"))
+		log.Println(color.InBold(color.InYellow(">>>> Service for the registry not found. Creating Service Registry")))
 		serviceSpec := &coreV1.Service{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: r.RegistryServiceName,
@@ -451,6 +459,38 @@ func (r *Registry) createPVC(ctx context.Context, client kubernetes.Clientset) e
 	}
 	// Already created and return nil
 	log.Printf(color.InGreen(">>>> PVC for registry already exists. Skipping creation."))
+	return nil
+}
+
+//Func updateTrustCA to update the trust ca in the registry
+func (r *Registry) updateTrustCA(ctx context.Context, client *kubernetes.Clientset) error {
+	res, err := client.CoreV1().Secrets("openshift-ingress").Get(ctx, "router-certs-default", metav1.GetOptions{})
+	if err != nil {
+		log.Printf(color.InRed("Error getting secret router-certs-defaults: %e"), err)
+		return err
+	}
+	caCertData := res.Data["tls.crt"]
+
+	var pathCaCert string
+	if r.Mode == "Hub" {
+		pathCaCert = "/etc/pki/ca-trust/source/anchors/internal-registry-hub.crt"
+	} else {
+		//TODO create for more than one spoke
+		pathCaCert = "/etc/pki/ca-trust/source/anchors/internal-registry-" + config.Ztp.Spokes[0].Name + ".crt"
+	}
+	if err := os.WriteFile(pathCaCert, caCertData, 0644); err != nil {
+		log.Printf(color.InRed("Error writing ca cert to %s: %e"), pathCaCert, err)
+		return err
+	}
+
+	rootCAs, _ := x509.SystemCertPool()
+	if rootCAs == nil {
+		rootCAs = x509.NewCertPool()
+	}
+	if ok := rootCAs.AppendCertsFromPEM(caCertData); !ok {
+		return fmt.Errorf(color.InRed("No certs appended, using system certs only"))
+	}
+	log.Println(color.InGreen(">>>> [OK] Updated trust ca."))
 	return nil
 }
 
