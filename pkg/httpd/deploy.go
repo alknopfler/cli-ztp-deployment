@@ -211,7 +211,7 @@ func (f *FileServer) createService(ctx context.Context, client kubernetes.Client
 				Ports: []coreV1.ServicePort{
 					{
 						Port:     80,
-						Protocol: "TCP",
+						Protocol: coreV1.ProtocolTCP,
 						TargetPort: intstr.IntOrString{
 							Type:   intstr.Int,
 							IntVal: 8080,

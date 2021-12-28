@@ -135,11 +135,10 @@ func (r *Registry) verifyDeployment(ctx context.Context, client kubernetes.Clien
 }
 
 func (r *Registry) verifyRoute(ctx context.Context, client routev1.RouteV1Client) (found bool, err error) {
-	route, err := client.Routes(r.RegistryNS).Get(ctx, r.RegistryRouteName, metav1.GetOptions{})
+	_, err = client.Routes(r.RegistryNS).Get(ctx, r.RegistryRouteName, metav1.GetOptions{})
 	if err != nil {
 		return false, err
 	}
-	//TODO add condition here
 	return true, nil
 }
 
@@ -148,7 +147,7 @@ func (r *Registry) verifyService(ctx context.Context, client kubernetes.Clientse
 	if err != nil {
 		return false, err
 	}
-	if service.Spec.Ports[0].Port != f.Port {
+	if service.Spec.Ports[0].Port != 443 {
 		return true, errors.New(color.InRed("[ERROR] verifying Service Registry: Service port is not ready"))
 	}
 	return true, nil
@@ -164,5 +163,3 @@ func (r *Registry) verifyPVC(ctx context.Context, client kubernetes.Clientset) (
 	}
 	return true, nil
 }
-
-//TODO change all string to constant

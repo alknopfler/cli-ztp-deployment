@@ -5,8 +5,16 @@ import (
 	"github.com/TwiN/go-color"
 	"github.com/alknopfler/cli-ztp-deployment/config"
 	"github.com/alknopfler/cli-ztp-deployment/pkg/auth"
+	"github.com/alknopfler/cli-ztp-deployment/pkg/resources"
+	apiroutev1 "github.com/openshift/api/route/v1"
+	routev1 "github.com/openshift/client-go/route/clientset/versioned/typed/route/v1"
+	appsv1 "k8s.io/api/apps/v1"
+	apiv1 "k8s.io/api/core/v1"
 	coreV1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	"log"
 	"sync"
@@ -42,7 +50,7 @@ func (r *Registry) RunDeployRegistry() error {
 	// Step 3 - Create the rest of the manifests for the registry. We'll use goroutines to do this
 	wgDeployRegistry.Add(4)
 	go func() error {
-		err := r.createDeployment(ctx, *client)
+		err := r.createDeployment(ctx, client)
 		wgDeployRegistry.Done()
 		if err != nil {
 			log.Fatalf("Error creating deployment: %v", err)
@@ -51,7 +59,7 @@ func (r *Registry) RunDeployRegistry() error {
 		return nil
 	}()
 	go func() error {
-		err := r.createService(ctx, *client)
+		err := r.createService(ctx, client)
 		wgDeployRegistry.Done()
 		if err != nil {
 			log.Fatalf("Error creating service: %v", err)
@@ -172,3 +180,278 @@ compatibility:
 	log.Println(color.InGreen(">>>> Config Map for the registry already exists. Skipping creation"))
 	return nil
 }
+
+//Func createDeployment to create the deployment for the registry
+func (r *Registry) createDeployment(ctx context.Context, client *kubernetes.Clientset) error {
+	if found, err := r.verifyDeployment(ctx, *client); !found && err != nil {
+		log.Printf(color.InYellow("Deployment for the registry not found, Creating it..."))
+		//create deployment
+		deployment := &appsv1.Deployment{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: r.RegistryDeploymentName,
+				Labels: map[string]string{
+					"name": r.RegistryDeploymentName,
+				},
+			},
+			Spec: appsv1.DeploymentSpec{
+				Replicas: int32Ptr(1),
+				Selector: &metav1.LabelSelector{
+					MatchLabels: map[string]string{
+						"name": r.RegistryDeploymentName,
+					},
+				},
+				Template: coreV1.PodTemplateSpec{
+					ObjectMeta: metav1.ObjectMeta{
+						Labels: map[string]string{
+							"name": r.RegistryDeploymentName,
+						},
+					},
+					Spec: coreV1.PodSpec{
+						Containers: []coreV1.Container{
+							{
+								Name:  r.RegistryDeploymentName,
+								Image: r.RegistryExtraImages,
+								Ports: []coreV1.ContainerPort{
+									{
+										Name:          "registry",
+										ContainerPort: 5000,
+										Protocol:      coreV1.ProtocolTCP,
+									},
+								},
+								VolumeMounts: []coreV1.VolumeMount{
+									{
+										Name:      "data",
+										MountPath: r.RegistryDataMountPath,
+									},
+									{
+										Name:      "certs-secret",
+										MountPath: r.RegistryCertMountPath,
+										ReadOnly:  true,
+									},
+									{
+										Name:      "auth-secret",
+										MountPath: r.RegistryAutoSecretMountPath,
+										ReadOnly:  true,
+									},
+									{
+										Name:      "registry-conf",
+										MountPath: r.RegistryConfMountPath,
+										ReadOnly:  true,
+										SubPath:   r.RegistryConfigFile,
+									},
+								},
+								Env: []coreV1.EnvVar{
+									{
+										Name:  "REGISTRY_AUTH",
+										Value: "htpasswd",
+									},
+									{
+										Name:  "REGISTRY_AUTH_HTPASSWD_REALM",
+										Value: "Registry",
+									},
+									{
+										Name:  "REGISTRY_AUTH_HTPASSWD_PATH",
+										Value: "/auth/htpasswd",
+									},
+									{
+										Name:  "REGISTRY_HTTP_TLS_CERTIFICATE",
+										Value: "/certs/tls.crt",
+									},
+									{
+										Name:  "REGISTRY_HTTP_TLS_KEY",
+										Value: "/certs/tls.key",
+									},
+									{
+										Name:  "REGISTRY_HTTP_SECRET",
+										Value: "ALongRandomSecretForRegistry",
+									},
+								},
+							},
+						},
+						Volumes: []coreV1.Volume{
+							{
+								Name: "data",
+								VolumeSource: coreV1.VolumeSource{
+									PersistentVolumeClaim: &coreV1.PersistentVolumeClaimVolumeSource{
+										ClaimName: r.RegistryPVCName},
+								},
+							},
+							{
+								Name: "certs-secret",
+								VolumeSource: coreV1.VolumeSource{
+									Secret: &coreV1.SecretVolumeSource{
+										SecretName: "kubeframe-registry-tls",
+									},
+								},
+							},
+							{
+								Name: "auth-secret",
+								VolumeSource: coreV1.VolumeSource{
+									Secret: &coreV1.SecretVolumeSource{
+										SecretName: "auth",
+									},
+								},
+							},
+							{
+								Name: "registry-conf",
+								VolumeSource: coreV1.VolumeSource{
+									ConfigMap: &coreV1.ConfigMapVolumeSource{
+										LocalObjectReference: coreV1.LocalObjectReference{
+											Name: r.RegistryConfigMapName},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		}
+		res, err := client.AppsV1().Deployments(r.RegistryNS).Create(ctx, deployment, metav1.CreateOptions{})
+		if err != nil {
+			log.Printf(color.InRed("Error creating deployment: %e"), err)
+			return err
+		}
+		err = resources.WaitForDeployment(ctx, res, client)
+		if err != nil {
+			log.Printf(color.InRed("[ERROR] waiting for deployment: %s"), err)
+			return err
+		}
+		log.Printf(color.InGreen(">>>> Created deployment %s\n"), res.GetObjectMeta().GetName())
+		return nil
+	}
+	// Already created and return nil
+	log.Printf(color.InGreen(">>>> Deployment Registry already exists. Skipping creation."))
+	return nil
+}
+
+//Func createService to create the service for the registry
+func (r *Registry) createService(ctx context.Context, client *kubernetes.Clientset) error {
+	if found, err := r.verifyService(ctx, *client); err != nil && !found {
+		log.Println(color.InYellow(">>>> Service for the registry not found. Creating Service Registry"))
+		serviceSpec := &coreV1.Service{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: r.RegistryServiceName,
+				Labels: map[string]string{
+					"name": r.RegistryServiceName,
+				},
+				Annotations: map[string]string{
+					"service.beta.openshift.io/serving-cert-secret-name": "kubeframe-registry-tls",
+				},
+			},
+			Spec: coreV1.ServiceSpec{
+				Selector: map[string]string{
+					"name": r.RegistryServiceName,
+				},
+				Type: "ClusterIP",
+				Ports: []coreV1.ServicePort{
+					{
+						Name:     "registry",
+						Port:     443,
+						Protocol: coreV1.ProtocolTCP,
+						TargetPort: intstr.IntOrString{
+							Type:   intstr.Int,
+							IntVal: 5000,
+						},
+					},
+				},
+				SessionAffinity: "None",
+			},
+		}
+
+		res, err := client.CoreV1().Services(r.RegistryNS).Create(ctx, serviceSpec, metav1.CreateOptions{})
+		if err != nil {
+			log.Printf(color.InRed("Error creating Service: %e"), err)
+			return err
+		}
+		err = resources.WaitForService(ctx, client, res)
+		if err != nil {
+			log.Printf(color.InRed("[ERROR] waiting for Service: %s"), err)
+			return err
+		}
+		log.Printf(color.InGreen(">>>> Created Service %s\n"), res.GetObjectMeta().GetName())
+		return nil
+	}
+	// Already created and return nil
+	log.Printf(color.InGreen(">>>> Service Registry already exists. Skipping creation."))
+	return nil
+}
+
+//Func createRoute to create a route for the registry
+func (r *Registry) createRoute(ctx context.Context, client routev1.RouteV1Client, dynamicclient dynamic.Interface) error {
+	if found, err := r.verifyRoute(ctx, client); err != nil && !found {
+		log.Println(color.InBold(color.InYellow(">>>> Route not found. Creating the Registry route")))
+		route := apiroutev1.Route{
+			ObjectMeta: metav1.ObjectMeta{
+				Labels: map[string]string{
+					"name": r.RegistryRouteName,
+				},
+				Name: r.RegistryRouteName,
+			},
+			Spec: apiroutev1.RouteSpec{
+				Port: &apiroutev1.RoutePort{
+					TargetPort: intstr.IntOrString{
+						Type:   intstr.String,
+						StrVal: "registry",
+					},
+				},
+				To: apiroutev1.RouteTargetReference{
+					Name: r.RegistryRouteName,
+				},
+			},
+		}
+		res, err := client.Routes(r.RegistryNS).Create(ctx, &route, metav1.CreateOptions{})
+		if err != nil {
+			log.Printf(color.InRed("Error creating route: %e"), err)
+			return err
+		}
+		err = resources.WaitForRoute(ctx, &client, res)
+		if err != nil {
+			log.Printf(color.InRed("[ERROR] waiting for route: %s"), err)
+			return err
+		}
+		log.Printf(color.InGreen(">>>> Created route %s\n"), res.GetObjectMeta().GetName())
+		return nil
+	}
+	// Already created and return nil
+	log.Printf(color.InGreen(">>>> Route for Registry already exists. Skipping creation."))
+	return nil
+}
+
+func (r *Registry) createPVC(ctx context.Context, client kubernetes.Clientset) error {
+	if found, err := r.verifyPVC(ctx, client); err != nil && !found {
+		log.Println(color.InBold(color.InYellow(">>>> Creating PVC Registry")))
+		fs := coreV1.PersistentVolumeFilesystem
+		pvc := &apiv1.PersistentVolumeClaim{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      r.RegistryPVCName,
+				Namespace: r.RegistryNS,
+			},
+			Spec: apiv1.PersistentVolumeClaimSpec{
+				AccessModes: []apiv1.PersistentVolumeAccessMode{apiv1.ReadWriteOnce},
+				Resources: apiv1.ResourceRequirements{
+					Requests: apiv1.ResourceList{
+						apiv1.ResourceName(apiv1.ResourceStorage): resource.MustParse("100Gi"),
+					},
+				},
+				VolumeMode: &fs,
+			},
+		}
+		res, err := client.CoreV1().PersistentVolumeClaims(r.RegistryNS).Create(ctx, pvc, metav1.CreateOptions{})
+		if err != nil {
+			log.Printf(color.InRed("Error creating Pvc: %e"), err)
+			return err
+		}
+		err = resources.WaitForPVC(ctx, &client, res)
+		if err != nil {
+			log.Printf(color.InRed("[ERROR] waiting for Pvc: %s"), err)
+			return err
+		}
+		log.Printf(color.InGreen(">>>> Created Pvc %s\n"), res.GetObjectMeta().GetName())
+		return nil
+	}
+	// Already created and return nil
+	log.Printf(color.InGreen(">>>> PVC for registry already exists. Skipping creation."))
+	return nil
+}
+
+func int32Ptr(i int32) *int32 { return &i }
