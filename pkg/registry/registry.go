@@ -28,6 +28,8 @@ type Registry struct {
 	RegistryRouteName           string
 	RegistryPVCName             string
 	RegistryPVMode              string
+	RegistryCaCertData          []byte
+	RegistryPathCaCert          string
 }
 
 //Constructor NewFileServer
@@ -57,5 +59,7 @@ func NewRegistry(mode string) *Registry {
 		RegistryAutoSecretMountPath: "/auth",
 		RegistryConfMountPath:       "/etc/docker/registry",
 		RegistryPVMode:              "Filesystem",
+		RegistryCaCertData:          []byte(""),
+		RegistryPathCaCert:          "",
 	}
 }

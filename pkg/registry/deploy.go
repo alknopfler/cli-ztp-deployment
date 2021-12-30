@@ -15,6 +15,8 @@ import (
 	coreV1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
@@ -471,16 +473,16 @@ func (r *Registry) updateTrustCA(ctx context.Context, client *kubernetes.Clients
 		log.Printf(color.InRed("Error getting secret router-certs-defaults: %e"), err)
 		return err
 	}
-	caCertData := res.Data["tls.crt"]
+	r.RegistryCaCertData = res.Data["tls.crt"]
 
 	var pathCaCert string
 	if r.Mode == "Hub" {
-		pathCaCert = "/etc/pki/ca-trust/source/anchors/internal-registry-hub.crt"
+		r.RegistryPathCaCert = "/etc/pki/ca-trust/source/anchors/internal-registry-hub.crt"
 	} else {
 		//TODO create for more than one spoke
-		pathCaCert = "/etc/pki/ca-trust/source/anchors/internal-registry-" + config.Ztp.Spokes[0].Name + ".crt"
+		r.RegistryPathCaCert = "/etc/pki/ca-trust/source/anchors/internal-registry-" + config.Ztp.Spokes[0].Name + ".crt"
 	}
-	if err := os.WriteFile(pathCaCert, caCertData, 0644); err != nil {
+	if err := os.WriteFile(pathCaCert, r.RegistryCaCertData, 0644); err != nil {
 		log.Printf(color.InRed("Error writing ca cert to %s: %e"), pathCaCert, err)
 		return err
 	}
@@ -489,10 +491,56 @@ func (r *Registry) updateTrustCA(ctx context.Context, client *kubernetes.Clients
 	if rootCAs == nil {
 		rootCAs = x509.NewCertPool()
 	}
-	if ok := rootCAs.AppendCertsFromPEM(caCertData); !ok {
+	if ok := rootCAs.AppendCertsFromPEM(r.RegistryCaCertData); !ok {
 		return fmt.Errorf(color.InRed("No certs appended, using system certs only"))
 	}
 	log.Println(color.InGreen(">>>> [OK] Updated trust ca."))
+	return nil
+}
+
+func (r *Registry) createMachineConfig(ctx context.Context, client *auth.ZTPAuth) error {
+	machineConfigGVR := schema.GroupVersionResource{
+		Group:    "machineconfiguration.openshift.io",
+		Version:  "v1",
+		Resource: "MachineConfig",
+	}
+
+	machineConfigSpec := &unstructured.Unstructured{
+		Object: map[string]interface{}{
+			"kind":       "MachineConfig",
+			"apiVersion": "operators.coreos.com/v1",
+			"metadata": map[string]interface{}{
+				"name": "update-localregistry-ca-certs",
+				"labels": map[string]interface{}{
+					"machineconfiguration.openshift.io/role": "master",
+				},
+			},
+			"spec": map[string]interface{}{
+				"config": map[string]interface{}{
+					"ignition": map[string]string{
+						"version": "3.1.0",
+					},
+					"storage": map[string]interface{}{
+						"files": []map[string]interface{}{
+							{
+								"path": r.RegistryPathCaCert,
+								"mode": "0493",
+								"contents": map[string]interface{}{
+									"source": "data:text/plain;charset=us-ascii;base64," + string(r.RegistryCaCertData[:]),
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+	res, err := client.GetAuthWithGeneric().Resource(machineConfigGVR).Namespace(r.RegistryNS).Create(ctx, machineConfigSpec, metav1.CreateOptions{})
+	if err != nil {
+		log.Printf(color.InRed("Error creating MachineConfig: %e"), err)
+		return err
+	}
+	log.Printf(color.InGreen(">>>> Created MachineConfig %s\n"), res.GetName())
 	return nil
 }
 
