@@ -154,7 +154,7 @@ func (r *Registry) createConfigMap(ctx context.Context, client *kubernetes.Clien
 				Name: r.RegistryConfigMapName,
 			},
 			Data: map[string]string{
-				"config.yaml": `version: 0.1
+				"config.yml": `version: 0.1
 log:
   fields:
     service: registry
@@ -174,7 +174,9 @@ health:
     threshold: 3
 compatibility:
   schema1:
-    enabled: true`,
+    enabled: true
+
+`,
 			},
 		}
 		_, err := client.CoreV1().ConfigMaps(r.RegistryNS).Create(ctx, configMap, metav1.CreateOptions{})
@@ -245,7 +247,7 @@ func (r *Registry) createDeployment(ctx context.Context, client *kubernetes.Clie
 										Name:      "registry-conf",
 										MountPath: r.RegistryConfMountPath,
 										ReadOnly:  true,
-										SubPath:   r.RegistryConfigFile,
+										//SubPath:   r.RegistryConfigFile,
 									},
 								},
 								Env: []coreV1.EnvVar{
