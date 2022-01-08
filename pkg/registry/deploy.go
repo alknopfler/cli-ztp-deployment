@@ -32,8 +32,8 @@ func (r *Registry) RunDeployRegistry() error {
 	defer cancel()
 	//get client from kubeconfig extracted based on Mode (HUB or SPOKE)
 	client := auth.NewZTPAuth(config.GetKubeconfigFromMode(r.Mode)).GetAuth()
-	dynamicClient := auth.NewZTPAuth(config.Ztp.Config.KubeconfigHUB).GetAuthWithGeneric()
-	ocpclient := auth.NewZTPAuth(config.Ztp.Config.KubeconfigHUB).GetRouteAuth()
+	dynamicClient := auth.NewZTPAuth(config.GetKubeconfigFromMode(r.Mode)).GetAuthWithGeneric()
+	ocpclient := auth.NewZTPAuth(config.GetKubeconfigFromMode(r.Mode)).GetRouteAuth()
 
 	//Step 1 - Create the namespace for the registry
 	err := r.createNamespace(ctx, client)
