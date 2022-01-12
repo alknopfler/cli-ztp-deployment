@@ -1,6 +1,15 @@
 package registry
 
-import "github.com/alknopfler/cli-ztp-deployment/config"
+import (
+	"context"
+	"fmt"
+	"github.com/alknopfler/cli-ztp-deployment/config"
+	routev1 "github.com/openshift/client-go/route/clientset/versioned/typed/route/v1"
+	"io/ioutil"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
+	"os"
+)
 
 //type FileServer
 type Registry struct {
@@ -62,4 +71,37 @@ func NewRegistry(mode string) *Registry {
 		RegistryCaCertData:          []byte(""),
 		RegistryPathCaCert:          "",
 	}
+}
+
+func (r *Registry) getRegistryRouteName(ctx context.Context, client *routev1.RouteV1Client) (string, error) {
+	route, err := client.Routes(r.RegistryNS).Get(ctx, r.RegistryRouteName, metav1.GetOptions{})
+	if err != nil {
+		return "", err
+	}
+	return route.Status.Ingress[0].Host, nil
+}
+
+func (r *Registry) getPullSecretBase(ctx context.Context, client *kubernetes.Clientset) (string, error) {
+	res, err := client.CoreV1().Secrets("openshift-config").Get(ctx, "pull-secret", metav1.GetOptions{})
+	if err != nil {
+		fmt.Println("entra1 error")
+		return "", err
+	}
+	fmt.Println(string(res.Data[".dockerconfigjson"]))
+	return string(res.Data[".dockerconfigjson"]), nil
+}
+
+//Func to write the content of string to a temporal file
+func (r *Registry) writePullSecretBaseToTempFile(string) error {
+	file, err := ioutil.TempFile("/tmp", "pull-secret-temp.json")
+	if err != nil {
+		fmt.Println(err)
+	}
+	// We can choose to have these files deleted on program close
+	defer os.Remove(file.Name())
+
+	if _, err := file.Write([]byte("hello world\n")); err != nil {
+		fmt.Println(err)
+	}
+
 }
