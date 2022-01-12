@@ -97,6 +97,13 @@ func (r *Registry) RunDeployRegistry() error {
 		log.Printf(color.InRed("Error updating the system CA with the new registry cert to be trusted: %v"), err)
 		return err
 	}
+
+	err = r.createMachineConfig(ctx, dynamicClient)
+	if err != nil {
+		log.Printf(color.InRed("Error Creating the Machine Config: %v"), err)
+		return err
+	}
+
 	return nil
 }
 
@@ -498,7 +505,7 @@ func (r *Registry) updateTrustCA(ctx context.Context, client *kubernetes.Clients
 	return nil
 }
 
-func (r *Registry) createMachineConfig(ctx context.Context, client *auth.ZTPAuth) error {
+func (r *Registry) createMachineConfig(ctx context.Context, client dynamic.Interface) error {
 	machineConfigGVR := schema.GroupVersionResource{
 		Group:    "machineconfiguration.openshift.io",
 		Version:  "v1",
@@ -535,7 +542,7 @@ func (r *Registry) createMachineConfig(ctx context.Context, client *auth.ZTPAuth
 			},
 		},
 	}
-	res, err := client.GetAuthWithGeneric().Resource(machineConfigGVR).Namespace(r.RegistryNS).Create(ctx, machineConfigSpec, metav1.CreateOptions{})
+	res, err := client.Resource(machineConfigGVR).Namespace(r.RegistryNS).Create(ctx, machineConfigSpec, metav1.CreateOptions{})
 	if err != nil {
 		log.Printf(color.InRed("Error creating MachineConfig: %e"), err)
 		return err
