@@ -14,6 +14,8 @@ func NewVerify() *cobra.Command {
 	c.AddCommand(NewPreflights())
 	c.AddCommand(NewVerifyHTTPD())
 	c.AddCommand(NewVerifyRegistry())
+	c.AddCommand(NewVerifyMirrorOcp())
+	c.AddCommand(NewVerifyMirrorOlm())
 
 	return c
 }

@@ -41,6 +41,7 @@ func newCommand() *cobra.Command {
 
 	c.AddCommand(cmd.NewVerify())
 	c.AddCommand(cmd.NewDeploy())
+	c.AddCommand(cmd.NewMirror())
 
 	return c
 }

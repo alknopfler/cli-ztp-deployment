@@ -163,3 +163,23 @@ func (r *Registry) verifyPVC(ctx context.Context, client kubernetes.Clientset) (
 	}
 	return true, nil
 }
+
+func (r *Registry) RunVerifyMirrorOcp() {
+
+	/*ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	client := auth.NewZTPAuth(config.Ztp.Config.KubeconfigHUB).GetAuth()
+	routeClient := auth.NewZTPAuth(config.Ztp.Config.KubeconfigHUB).GetRouteAuth()
+
+	*/
+}
+
+func (r *Registry) RunVerifyMirrorOlm() {
+
+	/*ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	client := auth.NewZTPAuth(config.Ztp.Config.KubeconfigHUB).GetAuth()
+	routeClient := auth.NewZTPAuth(config.Ztp.Config.KubeconfigHUB).GetRouteAuth()
+
+	*/
+}
