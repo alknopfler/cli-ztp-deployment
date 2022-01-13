@@ -2,18 +2,19 @@ package registry
 
 import (
 	"context"
-	"fmt"
 	"github.com/alknopfler/cli-ztp-deployment/config"
+	"github.com/alknopfler/cli-ztp-deployment/pkg/auth"
 	routev1 "github.com/openshift/client-go/route/clientset/versioned/typed/route/v1"
 	"io/ioutil"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes"
-	"os"
 )
 
 //type FileServer
 type Registry struct {
 	Mode                        string
+	PullSecretTempFile          string
+	PullSecretName              string
+	PullSecretNS                string
 	KubeframeNS                 string
 	RegistryNS                  string
 	MarketNS                    string
@@ -45,6 +46,9 @@ type Registry struct {
 func NewRegistry(mode string) *Registry {
 	return &Registry{
 		Mode:                        mode,
+		PullSecretTempFile:          "/tmp/pull-secret-temp.json",
+		PullSecretName:              "pull-secret",
+		PullSecretNS:                "openshift-config",
 		KubeframeNS:                 "kubeframe",
 		MarketNS:                    "openshift-marketplace",
 		OcDisCatalog:                "kubeframe-catalog",
@@ -81,27 +85,25 @@ func (r *Registry) getRegistryRouteName(ctx context.Context, client *routev1.Rou
 	return route.Status.Ingress[0].Host, nil
 }
 
-func (r *Registry) getPullSecretBase(ctx context.Context, client *kubernetes.Clientset) (string, error) {
-	res, err := client.CoreV1().Secrets("openshift-config").Get(ctx, "pull-secret", metav1.GetOptions{})
+func (r *Registry) GetPullSecretBase() string {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	//get client from kubeconfig extracted based on Mode (HUB or SPOKE)
+	client := auth.NewZTPAuth(config.GetKubeconfigFromMode(r.Mode)).GetAuth()
+	res, err := client.CoreV1().Secrets(r.PullSecretNS).Get(ctx, r.PullSecretName, metav1.GetOptions{})
 	if err != nil {
-		fmt.Println("entra1 error")
-		return "", err
+		return ""
 	}
-	fmt.Println(string(res.Data[".dockerconfigjson"]))
-	return string(res.Data[".dockerconfigjson"]), nil
+	return string(res.Data[".dockerconfigjson"])
 }
 
 //Func to write the content of string to a temporal file
-func (r *Registry) writePullSecretBaseToTempFile(string) error {
-	file, err := ioutil.TempFile("/tmp", "pull-secret-temp.json")
+func (r *Registry) WritePullSecretBaseToTempFile(data string) error {
+	err := ioutil.WriteFile(r.PullSecretTempFile, []byte(data), 0644)
 	if err != nil {
-		fmt.Println(err)
+		return err
 	}
-	// We can choose to have these files deleted on program close
-	defer os.Remove(file.Name())
-
-	if _, err := file.Write([]byte("hello world\n")); err != nil {
-		fmt.Println(err)
-	}
-
+	// Defer done in the cmd cobra command in order to be available during the cmd execution and remove after program closed
+	//defer os.Remove("/tmp/pull-secret-temp.json")
+	return nil
 }

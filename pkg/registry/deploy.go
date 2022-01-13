@@ -482,15 +482,15 @@ func (r *Registry) updateTrustCA(ctx context.Context, client *kubernetes.Clients
 	}
 	r.RegistryCaCertData = res.Data["tls.crt"]
 
-	var pathCaCert string
-	if r.Mode == "Hub" {
+	if r.Mode == config.MODE_HUB {
 		r.RegistryPathCaCert = "/etc/pki/ca-trust/source/anchors/internal-registry-hub.crt"
 	} else {
 		//TODO create for more than one spoke
 		r.RegistryPathCaCert = "/etc/pki/ca-trust/source/anchors/internal-registry-" + config.Ztp.Spokes[0].Name + ".crt"
 	}
-	if err := os.WriteFile(pathCaCert, r.RegistryCaCertData, 0644); err != nil {
-		log.Printf(color.InRed("Error writing ca cert to %s: %e"), pathCaCert, err)
+
+	if err := os.WriteFile(r.RegistryPathCaCert, r.RegistryCaCertData, 0644); err != nil {
+		log.Printf(color.InRed("Error writing ca cert to %s: %e"), r.RegistryPathCaCert, err)
 		return err
 	}
 
@@ -515,7 +515,7 @@ func (r *Registry) createMachineConfig(ctx context.Context, client dynamic.Inter
 	machineConfigSpec := &unstructured.Unstructured{
 		Object: map[string]interface{}{
 			"kind":       "MachineConfig",
-			"apiVersion": "operators.coreos.com/v1",
+			"apiVersion": "machineconfiguration.openshift.io/v1",
 			"metadata": map[string]interface{}{
 				"name": "update-localregistry-ca-certs",
 				"labels": map[string]interface{}{
@@ -542,7 +542,8 @@ func (r *Registry) createMachineConfig(ctx context.Context, client dynamic.Inter
 			},
 		},
 	}
-	res, err := client.Resource(machineConfigGVR).Namespace(r.RegistryNS).Create(ctx, machineConfigSpec, metav1.CreateOptions{})
+	fmt.Println(machineConfigSpec)
+	res, err := client.Resource(machineConfigGVR).Namespace("").Create(ctx, machineConfigSpec, metav1.CreateOptions{})
 	if err != nil {
 		log.Printf(color.InRed("Error creating MachineConfig: %e"), err)
 		return err
