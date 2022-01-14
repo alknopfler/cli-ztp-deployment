@@ -509,7 +509,7 @@ func (r *Registry) createMachineConfig(ctx context.Context, client dynamic.Inter
 	machineConfigGVR := schema.GroupVersionResource{
 		Group:    "machineconfiguration.openshift.io",
 		Version:  "v1",
-		Resource: "MachineConfig",
+		Resource: "machineconfigs",
 	}
 
 	machineConfigSpec := &unstructured.Unstructured{
@@ -530,9 +530,10 @@ func (r *Registry) createMachineConfig(ctx context.Context, client dynamic.Inter
 					"storage": map[string]interface{}{
 						"files": []map[string]interface{}{
 							{
-								"path": r.RegistryPathCaCert,
-								"mode": "0493",
-								"contents": map[string]interface{}{
+								"path":       r.RegistryPathCaCert,
+								"mode":       493,
+								"filesystem": "root",
+								"contents": map[string]string{
 									"source": "data:text/plain;charset=us-ascii;base64," + string(r.RegistryCaCertData[:]),
 								},
 							},
@@ -542,8 +543,7 @@ func (r *Registry) createMachineConfig(ctx context.Context, client dynamic.Inter
 			},
 		},
 	}
-	fmt.Println(machineConfigSpec)
-	res, err := client.Resource(machineConfigGVR).Namespace("").Create(ctx, machineConfigSpec, metav1.CreateOptions{})
+	res, err := client.Resource(machineConfigGVR).Create(ctx, machineConfigSpec, metav1.CreateOptions{})
 	if err != nil {
 		log.Printf(color.InRed("Error creating MachineConfig: %e"), err)
 		return err
