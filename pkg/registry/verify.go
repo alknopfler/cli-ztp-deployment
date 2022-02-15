@@ -25,7 +25,7 @@ func (r *Registry) RunVerifyRegistry() {
 	routeClient := auth.NewZTPAuth(config.Ztp.Config.KubeconfigHUB).GetRouteAuth()
 	dynamicClient := auth.NewZTPAuth(config.Ztp.Config.KubeconfigHUB).GetAuthWithGeneric()
 
-	wgVerifyRegistry.Add(8)
+	wgVerifyRegistry.Add(9)
 	go func() {
 		found, err := r.verifyNamespace(ctx, client)
 		if !found && err != nil {
@@ -94,6 +94,15 @@ func (r *Registry) RunVerifyRegistry() {
 			log.Println(color.InRed("[ERROR] PVC Registry found but not ready"))
 		} else {
 			log.Println(color.InGreen("[OK] PVC Registry found and ready"))
+		}
+		wgVerifyRegistry.Done()
+	}()
+	go func() {
+		err := r.verifyMachineConfig(ctx, dynamicClient)
+		if err != nil {
+			log.Println(color.InRed("[ERROR] Machine Config not applied "))
+		} else {
+			log.Println(color.InGreen("[OK] Machine Config found and applied ready"))
 		}
 		wgVerifyRegistry.Done()
 	}()
@@ -189,6 +198,20 @@ func (r *Registry) verifyMCP(ctx context.Context, client dynamic.Interface) erro
 	}
 
 	log.Println(color.InGreen("[OK] MCP Query returned results"))
+	return nil
+}
+
+func (r *Registry) verifyMachineConfig(ctx context.Context, client dynamic.Interface) error {
+	mcp, err := resources.NewGenericGet(ctx, client, "machineconfiguration.openshift.io", "v1", "machineconfig", "", "update-localregistry-ca-certs", "").GetResourceDynamically()
+	if err != nil {
+		log.Printf(color.InRed("[ERROR] Error getting MachineConfig info: %e"), err.Error())
+		return err
+	}
+
+	if mcp.Object == nil {
+		log.Println(color.InRed("[ERROR] MachineConfig not found or applied"))
+		return errors.New("[ERROR] MachineConfig not found or applied")
+	}
 	return nil
 }
 

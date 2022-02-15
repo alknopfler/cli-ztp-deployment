@@ -530,50 +530,56 @@ func (r *Registry) updateTrustCA(ctx context.Context, client *kubernetes.Clients
 }
 
 func (r *Registry) createMachineConfig(ctx context.Context, client dynamic.Interface) error {
-	machineConfigGVR := schema.GroupVersionResource{
-		Group:    "machineconfiguration.openshift.io",
-		Version:  "v1",
-		Resource: "machineconfigs",
-	}
+	if r.verifyMachineConfig(ctx, client) != nil {
 
-	machineConfigSpec := &unstructured.Unstructured{
-		Object: map[string]interface{}{
-			"kind":       "MachineConfig",
-			"apiVersion": "machineconfiguration.openshift.io/v1",
-			"metadata": map[string]interface{}{
-				"name": "update-localregistry-ca-certs",
-				"labels": map[string]interface{}{
-					"machineconfiguration.openshift.io/role": "master",
-				},
-			},
-			"spec": map[string]interface{}{
-				"config": map[string]interface{}{
-					"ignition": map[string]string{
-						"version": "3.1.0",
+		machineConfigGVR := schema.GroupVersionResource{
+			Group:    "machineconfiguration.openshift.io",
+			Version:  "v1",
+			Resource: "machineconfigs",
+		}
+
+		machineConfigSpec := &unstructured.Unstructured{
+			Object: map[string]interface{}{
+				"kind":       "MachineConfig",
+				"apiVersion": "machineconfiguration.openshift.io/v1",
+				"metadata": map[string]interface{}{
+					"name": "update-localregistry-ca-certs",
+					"labels": map[string]interface{}{
+						"machineconfiguration.openshift.io/role": "master",
 					},
-					"storage": map[string]interface{}{
-						"files": []map[string]interface{}{
-							{
-								"path":       r.RegistryPathCaCert,
-								"mode":       493,
-								"filesystem": "root",
-								"contents": map[string]string{
-									"source": "data:text/plain;charset=us-ascii;base64," + b64.StdEncoding.EncodeToString(r.RegistryCaCertData[:]),
+				},
+				"spec": map[string]interface{}{
+					"config": map[string]interface{}{
+						"ignition": map[string]string{
+							"version": "3.1.0",
+						},
+						"storage": map[string]interface{}{
+							"files": []map[string]interface{}{
+								{
+									"path":       r.RegistryPathCaCert,
+									"mode":       493,
+									"filesystem": "root",
+									"contents": map[string]string{
+										"source": "data:text/plain;charset=us-ascii;base64," + b64.StdEncoding.EncodeToString(r.RegistryCaCertData[:]),
+									},
 								},
 							},
 						},
 					},
 				},
 			},
-		},
+		}
+		res, err := client.Resource(machineConfigGVR).Create(ctx, machineConfigSpec, metav1.CreateOptions{})
+		if err != nil {
+			log.Printf(color.InRed("Error creating MachineConfig: %s"), err.Error())
+			return err
+		}
+		log.Printf(color.InGreen(">>>> Created MachineConfig %s\n"), res.GetName())
+		return nil
+	} else {
+		log.Printf(color.InGreen(">>>> MachineConfig for registry already exists. Skipping creation."))
+		return nil
 	}
-	res, err := client.Resource(machineConfigGVR).Create(ctx, machineConfigSpec, metav1.CreateOptions{})
-	if err != nil {
-		log.Printf(color.InRed("Error creating MachineConfig: %e"), err)
-		return err
-	}
-	log.Printf(color.InGreen(">>>> Created MachineConfig %s\n"), res.GetName())
-	return nil
 }
 
 func int32Ptr(i int32) *int32 { return &i }
