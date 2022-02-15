@@ -2,6 +2,6 @@
 
 ## Done
 
-- preflights (verify)
-- file server (deployment and verify)
+- preflights (verify) Done
+- HTTPD (deployment and verify) Done
 - registry (deployment and verify)
