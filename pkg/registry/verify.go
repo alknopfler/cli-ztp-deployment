@@ -6,6 +6,7 @@ import (
 	"github.com/TwiN/go-color"
 	"github.com/alknopfler/cli-ztp-deployment/config"
 	"github.com/alknopfler/cli-ztp-deployment/pkg/auth"
+	"github.com/alknopfler/cli-ztp-deployment/pkg/resources"
 	routev1 "github.com/openshift/client-go/route/clientset/versioned/typed/route/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/dynamic"
@@ -97,11 +98,9 @@ func (r *Registry) RunVerifyRegistry() {
 		wgVerifyRegistry.Done()
 	}()
 	go func() {
-		found, err := r.verifyMCP(ctx, dynamicClient)
-		if !found && err != nil {
+		err := r.verifyMCP(ctx, dynamicClient)
+		if err != nil {
 			log.Println(color.InRed("[ERROR] Machine Config and MCP not updated "))
-		} else if found && err != nil {
-			log.Println(color.InRed("[ERROR] Machine config and MCP not updated"))
 		} else {
 			log.Println(color.InGreen("[OK] Machine Config found and MCP ready"))
 		}
@@ -177,8 +176,20 @@ func (r *Registry) verifyPVC(ctx context.Context, client kubernetes.Clientset) (
 	return true, nil
 }
 
-func (r *Registry) verifyMCP(ctx context.Context, client dynamic.Interface) (found bool, err error) {
-	return false, nil
+func (r *Registry) verifyMCP(ctx context.Context, client dynamic.Interface) error {
+	mcp, err := resources.NewGenericGet(ctx, client, "machineconfiguration.openshift.io", "v1", "machineconfigpools", "", "master", "'.status.conditions[] | select (.type == \"Updated\")'").GetResourcesByJq()
+	if err != nil {
+		log.Println(color.InRed("[ERROR] Error getting cluster operators info: %e"), err)
+		return err
+	}
+
+	if len(mcp) == 0 {
+		log.Println(color.InRed("[ERROR] MCP Query returned no results"))
+		return errors.New("[ERROR] MCP Query returned no results")
+	}
+
+	log.Println(color.InGreen("[OK] MCP Query returned results"))
+	return nil
 }
 
 func (r *Registry) RunVerifyMirrorOcp() {

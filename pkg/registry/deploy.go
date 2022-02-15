@@ -76,7 +76,7 @@ func (r *Registry) RunDeployRegistry() error {
 		return nil
 	}()
 	go func() error {
-		err := r.createRoute(ctx, *ocpclient, dynamicClient)
+		err := r.createRoute(ctx, *ocpclient)
 		wgDeployRegistry.Done()
 		if err != nil {
 			log.Fatalf("Error creating route: %v", err)
@@ -107,7 +107,7 @@ func (r *Registry) RunDeployRegistry() error {
 		return err
 	}
 
-	_, err = r.verifyMCP(ctx, dynamicClient)
+	err = r.verifyMCP(ctx, dynamicClient)
 	if err != nil {
 		log.Printf(color.InRed("Error Waiting for the MCP to be updated in all hosts: %v"), err)
 		return err
@@ -145,13 +145,13 @@ func (r *Registry) createSecret(ctx context.Context, client *kubernetes.Clientse
 		name := r.RegistryUser
 		password := r.RegistryPass
 		htpasswd.SetPassword(file, name, password, htpasswd.HashBCrypt)
-		auth, _ := os.ReadFile(file)
+		htauth, _ := os.ReadFile(file)
 		secret := &coreV1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: r.RegistrySecretName,
 			},
 			Data: map[string][]byte{
-				"htpasswd": auth,
+				"htpasswd": htauth,
 			},
 		}
 
@@ -410,7 +410,7 @@ func (r *Registry) createService(ctx context.Context, client *kubernetes.Clients
 }
 
 //Func createRoute to create a route for the registry
-func (r *Registry) createRoute(ctx context.Context, client routev1.RouteV1Client, dynamicclient dynamic.Interface) error {
+func (r *Registry) createRoute(ctx context.Context, client routev1.RouteV1Client) error {
 	if found, err := r.verifyRoute(ctx, client); err != nil && !found {
 		log.Println(color.InBold(color.InYellow(">>>> Route not found. Creating the Registry route")))
 		route := apiroutev1.Route{
@@ -429,6 +429,10 @@ func (r *Registry) createRoute(ctx context.Context, client routev1.RouteV1Client
 				},
 				To: apiroutev1.RouteTargetReference{
 					Name: r.RegistryRouteName,
+				},
+				TLS: &apiroutev1.TLSConfig{
+					Termination:                   apiroutev1.TLSTerminationReencrypt,
+					InsecureEdgeTerminationPolicy: apiroutev1.InsecureEdgeTerminationPolicyRedirect,
 				},
 			},
 		}
