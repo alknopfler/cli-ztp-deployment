@@ -3,6 +3,7 @@ package registry
 import (
 	"context"
 	"crypto/x509"
+	b64 "encoding/base64"
 	"fmt"
 	"github.com/TwiN/go-color"
 	"github.com/alknopfler/cli-ztp-deployment/config"
@@ -10,6 +11,7 @@ import (
 	"github.com/alknopfler/cli-ztp-deployment/pkg/resources"
 	apiroutev1 "github.com/openshift/api/route/v1"
 	routev1 "github.com/openshift/client-go/route/clientset/versioned/typed/route/v1"
+	"io/ioutil"
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
 	coreV1 "k8s.io/api/core/v1"
@@ -498,7 +500,13 @@ func (r *Registry) updateTrustCA(ctx context.Context, client *kubernetes.Clients
 	if rootCAs == nil {
 		rootCAs = x509.NewCertPool()
 	}
-	if ok := rootCAs.AppendCertsFromPEM(r.RegistryCaCertData); !ok {
+
+	certs, err := ioutil.ReadFile(r.RegistryPathCaCert)
+	if err != nil {
+		log.Fatalf("Failed to append %q to RootCAs: %v", r.RegistryPathCaCert, err)
+	}
+
+	if ok := rootCAs.AppendCertsFromPEM(certs); !ok {
 		return fmt.Errorf(color.InRed("No certs appended, using system certs only"))
 	}
 	log.Println(color.InGreen(">>>> [OK] Updated trust ca."))
@@ -534,7 +542,7 @@ func (r *Registry) createMachineConfig(ctx context.Context, client dynamic.Inter
 								"mode":       493,
 								"filesystem": "root",
 								"contents": map[string]string{
-									"source": "data:text/plain;charset=us-ascii;base64," + string(r.RegistryCaCertData[:]),
+									"source": "data:text/plain;charset=us-ascii;base64," + b64.StdEncoding.EncodeToString(r.RegistryCaCertData[:]),
 								},
 							},
 						},
