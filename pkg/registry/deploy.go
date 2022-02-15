@@ -9,6 +9,7 @@ import (
 	"github.com/alknopfler/cli-ztp-deployment/config"
 	"github.com/alknopfler/cli-ztp-deployment/pkg/auth"
 	"github.com/alknopfler/cli-ztp-deployment/pkg/resources"
+	"github.com/foomo/htpasswd"
 	apiroutev1 "github.com/openshift/api/route/v1"
 	routev1 "github.com/openshift/client-go/route/clientset/versioned/typed/route/v1"
 	"io/ioutil"
@@ -106,6 +107,12 @@ func (r *Registry) RunDeployRegistry() error {
 		return err
 	}
 
+	_, err = r.verifyMCP(ctx, dynamicClient)
+	if err != nil {
+		log.Printf(color.InRed("Error Waiting for the MCP to be updated in all hosts: %v"), err)
+		return err
+	}
+
 	return nil
 }
 
@@ -134,12 +141,17 @@ func (r *Registry) createSecret(ctx context.Context, client *kubernetes.Clientse
 	if found, err := r.verifySecret(ctx, client); !found && err != nil {
 		log.Printf(color.InBold(color.InYellow("Secret for the registry not found, Creating it...")))
 		//create secret
+		file := "/tmp/demo.htpasswd"
+		name := r.RegistryUser
+		password := r.RegistryPass
+		htpasswd.SetPassword(file, name, password, htpasswd.HashBCrypt)
+		auth, _ := os.ReadFile(file)
 		secret := &coreV1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: r.RegistrySecretName,
 			},
 			Data: map[string][]byte{
-				"htpasswd": []byte(r.RegistrySecretHash),
+				"htpasswd": auth,
 			},
 		}
 

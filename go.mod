@@ -7,6 +7,7 @@ require (
 	github.com/TwiN/go-color v1.1.0
 	github.com/containers/common v0.44.4
 	github.com/containers/image/v5 v5.16.0
+	github.com/foomo/htpasswd v0.0.0-20200116085101-e3a90e78da9c
 	github.com/itchyny/gojq v0.12.6
 	github.com/openshift/api v0.0.0-20210901140736-d8ed1449662d
 	github.com/openshift/client-go v0.0.0-20200929181438-91d71ef2122c
@@ -19,6 +20,7 @@ require (
 
 require (
 	github.com/BurntSushi/toml v0.4.1 // indirect
+	github.com/GehirnInc/crypt v0.0.0-20190301055215-6c0105aabd46 // indirect
 	github.com/Microsoft/go-winio v0.5.0 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cespare/xxhash/v2 v2.1.2 // indirect
@@ -66,6 +68,7 @@ require (
 	github.com/syndtr/gocapability v0.0.0-20200815063812-42c35b437635 // indirect
 	github.com/ulikunitz/xz v0.5.10 // indirect
 	github.com/vbatts/tar-split v0.11.2 // indirect
+	golang.org/x/crypto v0.0.0-20210817164053-32db794688a5 // indirect
 	golang.org/x/net v0.0.0-20211209124913-491a49abca63 // indirect
 	golang.org/x/oauth2 v0.0.0-20211104180415-d3ed0bb246c8 // indirect
 	golang.org/x/sys v0.0.0-20211205182925-97ca703d548d // indirect

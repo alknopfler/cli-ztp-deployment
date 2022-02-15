@@ -8,6 +8,7 @@ import (
 	"github.com/alknopfler/cli-ztp-deployment/pkg/auth"
 	routev1 "github.com/openshift/client-go/route/clientset/versioned/typed/route/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	"log"
 	"sync"
@@ -21,8 +22,9 @@ func (r *Registry) RunVerifyRegistry() {
 	defer cancel()
 	client := auth.NewZTPAuth(config.Ztp.Config.KubeconfigHUB).GetAuth()
 	routeClient := auth.NewZTPAuth(config.Ztp.Config.KubeconfigHUB).GetRouteAuth()
+	dynamicClient := auth.NewZTPAuth(config.Ztp.Config.KubeconfigHUB).GetAuthWithGeneric()
 
-	wgVerifyRegistry.Add(7)
+	wgVerifyRegistry.Add(8)
 	go func() {
 		found, err := r.verifyNamespace(ctx, client)
 		if !found && err != nil {
@@ -94,6 +96,17 @@ func (r *Registry) RunVerifyRegistry() {
 		}
 		wgVerifyRegistry.Done()
 	}()
+	go func() {
+		found, err := r.verifyMCP(ctx, dynamicClient)
+		if !found && err != nil {
+			log.Println(color.InRed("[ERROR] Machine Config and MCP not updated "))
+		} else if found && err != nil {
+			log.Println(color.InRed("[ERROR] Machine config and MCP not updated"))
+		} else {
+			log.Println(color.InGreen("[OK] Machine Config found and MCP ready"))
+		}
+		wgVerifyRegistry.Done()
+	}()
 	wgVerifyRegistry.Wait()
 }
 
@@ -162,6 +175,10 @@ func (r *Registry) verifyPVC(ctx context.Context, client kubernetes.Clientset) (
 		return true, errors.New(color.InRed("[ERROR] verifying PVC Registry: PVC is not bound"))
 	}
 	return true, nil
+}
+
+func (r *Registry) verifyMCP(ctx context.Context, client dynamic.Interface) (found bool, err error) {
+	return false, nil
 }
 
 func (r *Registry) RunVerifyMirrorOcp() {
