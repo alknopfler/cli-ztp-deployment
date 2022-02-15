@@ -179,7 +179,7 @@ func (r *Registry) verifyPVC(ctx context.Context, client kubernetes.Clientset) (
 func (r *Registry) verifyMCP(ctx context.Context, client dynamic.Interface) error {
 	mcp, err := resources.NewGenericGet(ctx, client, "machineconfiguration.openshift.io", "v1", "machineconfigpools", "", "master", "'.status.conditions[] | select (.type == \"Updated\")'").GetResourcesByJq()
 	if err != nil {
-		log.Println(color.InRed("[ERROR] Error getting cluster operators info: %e"), err)
+		log.Printf(color.InRed("[ERROR] Error getting MachineConfig info: %e"), err)
 		return err
 	}
 
