@@ -4,4 +4,5 @@
 
 - preflights (verify) Done
 - HTTPD (deployment and verify) Done
-- registry (deployment and verify)
+- registry (deployment and verify) Done
+- Mirror ocp 

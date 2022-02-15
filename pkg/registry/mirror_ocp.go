@@ -2,13 +2,14 @@ package registry
 
 import (
 	"context"
+	"fmt"
 	"github.com/TwiN/go-color"
 	"github.com/alknopfler/cli-ztp-deployment/config"
 	"github.com/alknopfler/cli-ztp-deployment/pkg/auth"
 	a "github.com/containers/common/pkg/auth"
 	"github.com/containers/image/v5/types"
 	"log"
-	"time"
+	"os"
 )
 
 func (r *Registry) RunMirrorOcp() error {
@@ -20,6 +21,7 @@ func (r *Registry) RunMirrorOcp() error {
 	ocpclient := auth.NewZTPAuth(config.GetKubeconfigFromMode(r.Mode)).GetRouteAuth()
 
 	regName, err := r.getRegistryRouteName(ctx, ocpclient)
+
 	if err != nil {
 		log.Printf(color.InRed("[ERROR] getting the Route Name for the registry: %e"), err)
 		return err
@@ -27,17 +29,17 @@ func (r *Registry) RunMirrorOcp() error {
 	args := []string{regName}
 	loginOpts := a.LoginOptions{
 		AuthFile:                  r.PullSecretTempFile,
+		CertDir:                   r.RegistryPathCaCert,
 		Password:                  r.RegistryPass,
 		Username:                  r.RegistryUser,
 		StdinPassword:             false,
 		GetLoginSet:               false,
-		Verbose:                   true,
+		Verbose:                   false,
 		AcceptRepositories:        true,
-		Stdin:                     nil,
-		Stdout:                    nil,
+		Stdin:                     os.Stdin,
+		Stdout:                    os.Stdout,
 		AcceptUnspecifiedRegistry: true,
 	}
-
 	sysCtx := &types.SystemContext{
 		AuthFilePath:                loginOpts.AuthFile,
 		DockerCertPath:              loginOpts.CertDir,
@@ -48,6 +50,6 @@ func (r *Registry) RunMirrorOcp() error {
 		log.Printf(color.InRed("[ERROR] Logging in to the registry: %e"), err)
 		return err
 	}
-	time.Sleep(1 * time.Minute)
+	fmt.Println("[INFO] Logging in to the registry")
 	return nil
 }
