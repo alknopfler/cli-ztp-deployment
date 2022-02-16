@@ -2,14 +2,13 @@ package registry
 
 import (
 	"context"
-	"github.com/TwiN/go-color"
 	"github.com/alknopfler/cli-ztp-deployment/config"
 	"github.com/alknopfler/cli-ztp-deployment/pkg/auth"
 	a "github.com/containers/common/pkg/auth"
 	"github.com/containers/image/v5/types"
 	adm "github.com/openshift/oc/pkg/cli/admin/release"
 	"github.com/openshift/oc/pkg/cli/image/manifest"
-	"k8s.io/kubernetes/staging/src/k8s.io/cli-runtime/pkg/genericclioptions"
+	"k8s.io/cli-runtime/pkg/genericclioptions"
 	"log"
 	"os"
 )
