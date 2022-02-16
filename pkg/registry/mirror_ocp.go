@@ -7,6 +7,9 @@ import (
 	"github.com/alknopfler/cli-ztp-deployment/pkg/auth"
 	a "github.com/containers/common/pkg/auth"
 	"github.com/containers/image/v5/types"
+	adm "github.com/openshift/oc/pkg/cli/admin/release"
+	"github.com/openshift/oc/pkg/cli/image/manifest"
+	"k8s.io/kubernetes/staging/src/k8s.io/cli-runtime/pkg/genericclioptions"
 	"log"
 	"os"
 )
@@ -15,17 +18,32 @@ func (r *Registry) RunMirrorOcp() error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	//get client from kubeconfig extracted based on Mode (HUB or SPOKE)
-	//client := auth.NewZTPAuth(config.GetKubeconfigFromMode(r.Mode)).GetAuth()
+	//client := auth.NewZTPAuth(config.GetKubeconfigFromMode(r.Mode))sie.GetAuth()
 	//dynamicClient := auth.NewZTPAuth(config.GetKubeconfigFromMode(r.Mode)).GetAuthWithGeneric()
 	ocpclient := auth.NewZTPAuth(config.GetKubeconfigFromMode(r.Mode)).GetRouteAuth()
 
 	regName, err := r.getRegistryRouteName(ctx, ocpclient)
-
 	if err != nil {
 		log.Printf(color.InRed("[ERROR] getting the Route Name for the registry: %e"), err)
 		return err
 	}
-	args := []string{regName}
+	r.RegistryRoute = regName
+	if r.login(ctx) != nil {
+		log.Printf(color.InRed("[ERROR] login to registry: %e"), err)
+		return err
+	}
+	log.Println(color.InGreen("[INFO] login to registry successful"))
+
+	if r.mirrorOcp(ctx) != nil {
+		log.Printf(color.InRed("[ERROR] mirroring the OCP image: %e"), err)
+		return err
+	}
+	log.Println(color.InGreen("[INFO] mirroring the OCP image successful"))
+	return nil
+}
+
+func (r *Registry) login(ctx context.Context) error {
+	args := []string{r.RegistryRoute}
 	loginOpts := a.LoginOptions{
 		AuthFile:                  r.PullSecretTempFile,
 		CertDir:                   r.RegistryPathCaCert,
@@ -44,11 +62,23 @@ func (r *Registry) RunMirrorOcp() error {
 		DockerCertPath:              loginOpts.CertDir,
 		DockerInsecureSkipTLSVerify: types.NewOptionalBool(true),
 	}
-	err = a.Login(ctx, sysCtx, &loginOpts, args)
-	if err != nil {
-		log.Printf(color.InRed("[ERROR] Logging in to the registry: %e"), err)
-		return err
+	return a.Login(ctx, sysCtx, &loginOpts, args)
+
+}
+
+func (r *Registry) mirrorOcp(ctx context.Context) error {
+	opt := adm.MirrorOptions{
+		IOStreams:       genericclioptions.IOStreams{In: os.Stdin, Out: os.Stdout, ErrOut: os.Stderr},
+		SecurityOptions: manifest.SecurityOptions{},
+		ParallelOptions: manifest.ParallelOptions{},
+		From:            r.RegistryOCPReleaseImage,
+		To:              r.RegistryRoute + "/" + r.RegistryOCPDestIndexNS,
+		ToRelease:       r.RegistryRoute + "/" + r.RegistryOCPDestIndexNS + ":" + config.Ztp.Config.OcOCPTag,
+		SkipRelease:     false,
+		DryRun:          false,
+		ClientFn:        nil,
+		ImageStream:     nil,
+		TargetFn:        nil,
 	}
-	log.Println(color.InGreen("Logged into the registry and grabbed the credentials to the file"))
-	return nil
+	return opt.Run()
 }

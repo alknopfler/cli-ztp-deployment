@@ -19,6 +19,9 @@ type Registry struct {
 	RegistryNS                  string
 	MarketNS                    string
 	RegistryConfigFile          string
+	RegistryRoute               string
+	RegistryOCPReleaseImage     string
+	RegistryOCPDestIndexNS      string
 	RegistrySrcPkg              string
 	RegistrySrcPkgFormatted     string
 	RegistryExtraImages         string
@@ -26,7 +29,6 @@ type Registry struct {
 	OcpReleaseFull              string
 	RegistryUser                string
 	RegistryPass                string
-	RegistrySecretHash          string
 	RegistrySecretName          string
 	RegistryConfigMapName       string
 	RegistryDeploymentName      string
@@ -54,13 +56,15 @@ func NewRegistry(mode string) *Registry {
 		OcDisCatalog:                "kubeframe-catalog",
 		OcpReleaseFull:              config.Ztp.Config.OcOCPVersion + ".0",
 		RegistryNS:                  "kubeframe-registry",
+		RegistryRoute:               "",
 		RegistryConfigFile:          "config.yml",
+		RegistryOCPDestIndexNS:      "ocp4/openshift4",
+		RegistryOCPReleaseImage:     "quay.io/openshift-release-dev/ocp-release:" + config.Ztp.Config.OcOCPTag,
 		RegistrySrcPkg:              "kubernetes-nmstate-operator,metallb-operator,ocs-operator,local-storage-operator,advanced-cluster-management",
 		RegistrySrcPkgFormatted:     "kubernetes-nmstate-operator metallb-operator ocs-operator local-storage-operator advanced-cluster-management",
 		RegistryExtraImages:         "quay.io/jparrill/registry:2",
 		RegistryUser:                "dummy",
 		RegistryPass:                "dummy",
-		RegistrySecretHash:          "dummy:$2y$05$VYlWo5DJrfSddVPrGWREwuuy8K.UgMoPoH2pSQpxPxwSiHrWbMa22",
 		RegistrySecretName:          "auth",
 		RegistryConfigMapName:       "registry-conf",
 		RegistryDeploymentName:      "kubeframe-registry",
