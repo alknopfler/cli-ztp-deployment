@@ -2,7 +2,6 @@ package registry
 
 import (
 	"context"
-	"fmt"
 	"github.com/TwiN/go-color"
 	"github.com/alknopfler/cli-ztp-deployment/config"
 	"github.com/alknopfler/cli-ztp-deployment/pkg/auth"
@@ -50,6 +49,6 @@ func (r *Registry) RunMirrorOcp() error {
 		log.Printf(color.InRed("[ERROR] Logging in to the registry: %e"), err)
 		return err
 	}
-	fmt.Println("[INFO] Logging in to the registry")
+	log.Println(color.InGreen("Logged into the registry and grabbed the credentials to the file"))
 	return nil
 }
