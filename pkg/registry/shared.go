@@ -80,7 +80,7 @@ func (r *Registry) UpdateTrustCA(ctx context.Context, client *kubernetes.Clients
 	return nil
 }
 
-func (r *Registry) CreateCatalogSource(ctx context.Context, client *kubernetes.Clientset) error {
+func (r *Registry) CreateCatalogSource(ctx context.Context) error {
 	log.Println(color.InYellow(">>>> Creating catalog source."))
 	olmclient := auth.NewZTPAuth(config.GetKubeconfigFromMode(r.Mode)).GetOlmAuth()
 
