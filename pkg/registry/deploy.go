@@ -2,9 +2,7 @@ package registry
 
 import (
 	"context"
-	"crypto/x509"
 	b64 "encoding/base64"
-	"fmt"
 	"github.com/TwiN/go-color"
 	"github.com/alknopfler/cli-ztp-deployment/config"
 	"github.com/alknopfler/cli-ztp-deployment/pkg/auth"
@@ -12,7 +10,6 @@ import (
 	"github.com/foomo/htpasswd"
 	apiroutev1 "github.com/openshift/api/route/v1"
 	routev1 "github.com/openshift/client-go/route/clientset/versioned/typed/route/v1"
-	"io/ioutil"
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
 	coreV1 "k8s.io/api/core/v1"
@@ -488,44 +485,6 @@ func (r *Registry) createPVC(ctx context.Context, client kubernetes.Clientset) e
 	}
 	// Already created and return nil
 	log.Printf(color.InGreen(">>>> PVC for registry already exists. Skipping creation."))
-	return nil
-}
-
-//Func UpdateTrustCA to update the trust ca in the registry
-func (r *Registry) UpdateTrustCA(ctx context.Context, client *kubernetes.Clientset) error {
-	res, err := client.CoreV1().Secrets("openshift-ingress").Get(ctx, "router-certs-default", metav1.GetOptions{})
-	if err != nil {
-		log.Printf(color.InRed("Error getting secret router-certs-defaults: %e"), err)
-		return err
-	}
-	r.RegistryCaCertData = res.Data["tls.crt"]
-
-	if r.Mode == config.MODE_HUB {
-		r.RegistryPathCaCert = "/etc/pki/ca-trust/source/anchors/internal-registry-hub.crt"
-	} else {
-		//TODO create for more than one spoke
-		r.RegistryPathCaCert = "/etc/pki/ca-trust/source/anchors/internal-registry-" + config.Ztp.Spokes[0].Name + ".crt"
-	}
-
-	if err := os.WriteFile(r.RegistryPathCaCert, r.RegistryCaCertData, 0644); err != nil {
-		log.Printf(color.InRed("Error writing ca cert to %s: %s"), r.RegistryPathCaCert, err.Error())
-		return err
-	}
-
-	rootCAs, _ := x509.SystemCertPool()
-	if rootCAs == nil {
-		rootCAs = x509.NewCertPool()
-	}
-
-	certs, err := ioutil.ReadFile(r.RegistryPathCaCert)
-	if err != nil {
-		log.Fatalf("Failed to append %q to RootCAs: %v", r.RegistryPathCaCert, err)
-	}
-
-	if ok := rootCAs.AppendCertsFromPEM(certs); !ok {
-		return fmt.Errorf(color.InRed("No certs appended, using system certs only"))
-	}
-	log.Println(color.InGreen(">>>> [OK] Updated trust ca."))
 	return nil
 }
 

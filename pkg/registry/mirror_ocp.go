@@ -6,8 +6,8 @@ import (
 	"github.com/alknopfler/cli-ztp-deployment/config"
 	"github.com/alknopfler/cli-ztp-deployment/pkg/auth"
 	"github.com/alknopfler/cli-ztp-deployment/pkg/resources"
-	a "github.com/containers/common/pkg/auth"
-	"github.com/containers/image/v5/types"
+	"sync"
+
 	adm "github.com/openshift/oc/pkg/cli/admin/release"
 	"github.com/openshift/oc/pkg/cli/image/manifest"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
@@ -16,6 +16,8 @@ import (
 	"log"
 	"os"
 )
+
+var wgMirrorOCP sync.WaitGroup
 
 func (r *Registry) RunMirrorOcp() error {
 	ctx, cancel := context.WithCancel(context.Background())
@@ -26,22 +28,35 @@ func (r *Registry) RunMirrorOcp() error {
 	//dynamicClient := auth.NewZTPAuth(config.GetKubeconfigFromMode(r.Mode)).GetAuthWithGeneric()
 	ocpclient := auth.NewZTPAuth(config.GetKubeconfigFromMode(r.Mode)).GetRouteAuth()
 
+	wgMirrorOCP.Add(2)
+
 	//Update Trust CA if not present (tekton  use case)
-	if err := r.UpdateTrustCA(ctx, client); err != nil {
-		log.Printf(color.InRed("[ERROR] Updating the ca for the mirror ocp: %s"), err.Error())
-		return err
-	}
+	go func() error {
+		if err := r.UpdateTrustCA(ctx, client); err != nil {
+			log.Printf(color.InRed("[ERROR] Updating the ca for the mirror ocp: %s"), err.Error())
+			return err
+		}
+		wgMirrorOCP.Done()
+		return nil
+	}()
 
 	//Get the registry route
-	regName, err := r.getRegistryRouteName(ctx, ocpclient)
-	if err != nil {
-		log.Printf(color.InRed("[ERROR] getting the Route Name for the registry: %s"), err.Error())
-		return err
-	}
-	r.RegistryRoute = regName
+	go func() error {
+		regName, err := r.getRegistryRouteName(ctx, ocpclient)
+		if err != nil {
+			log.Printf(color.InRed("[ERROR] getting the Route Name for the registry: %s"), err.Error())
+			return err
+		}
+		r.RegistryRoute = regName
+		wgMirrorOCP.Done()
+		return nil
+	}()
+
+	wgVerifyRegistry.Wait()
 
 	//Login to the registry to grab the authfile with the new registry credentials
-	if r.Login(ctx) != nil {
+	err := r.Login(ctx)
+	if err != nil {
 		log.Printf(color.InRed("[ERROR] login to registry: %s"), err.Error())
 		return err
 	}
@@ -57,30 +72,6 @@ func (r *Registry) RunMirrorOcp() error {
 	}
 	log.Println(color.InGreen("[INFO] mirroring the OCP image successful"))
 	return nil
-}
-
-func (r *Registry) Login(ctx context.Context) error {
-	args := []string{r.RegistryRoute}
-	loginOpts := a.LoginOptions{
-		AuthFile:      r.PullSecretTempFile,
-		CertDir:       r.RegistryPathCaCert,
-		Password:      r.RegistryPass,
-		Username:      r.RegistryUser,
-		StdinPassword: false,
-		GetLoginSet:   false,
-		//Verbose:                   false,
-		//AcceptRepositories:        true,
-		Stdin:                     os.Stdin,
-		Stdout:                    os.Stdout,
-		AcceptUnspecifiedRegistry: true,
-	}
-	sysCtx := &types.SystemContext{
-		AuthFilePath:                loginOpts.AuthFile,
-		DockerCertPath:              loginOpts.CertDir,
-		DockerInsecureSkipTLSVerify: types.NewOptionalBool(true),
-	}
-	return a.Login(ctx, sysCtx, &loginOpts, args)
-
 }
 
 func (r *Registry) mirrorOcp() error {
