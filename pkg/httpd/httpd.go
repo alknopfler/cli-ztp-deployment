@@ -27,7 +27,7 @@ const (
 	HTTPD_NAMESPACE            = "default"
 	HTTPD_VOLUME_NAME          = "httpd-pv-storage"
 	HTTPD_PVC_NAME             = "httpd-pv-claim"
-	HTTPD_DEPLOYMENT_NAME      = "nginx"
+	HTTPD_DEPLOYMENT_NAME      = "httpd"
 )
 
 //type FileServer
