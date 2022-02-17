@@ -95,7 +95,7 @@ func (r *Registry) RunDeployRegistry() error {
 	}()
 	wgDeployRegistry.Wait()
 
-	err = r.updateTrustCA(ctx, client)
+	err = r.UpdateTrustCA(ctx, client)
 	if err != nil {
 		log.Printf(color.InRed("Error updating the system CA with the new registry cert to be trusted: %v"), err)
 		return err
@@ -491,8 +491,8 @@ func (r *Registry) createPVC(ctx context.Context, client kubernetes.Clientset) e
 	return nil
 }
 
-//Func updateTrustCA to update the trust ca in the registry
-func (r *Registry) updateTrustCA(ctx context.Context, client *kubernetes.Clientset) error {
+//Func UpdateTrustCA to update the trust ca in the registry
+func (r *Registry) UpdateTrustCA(ctx context.Context, client *kubernetes.Clientset) error {
 	res, err := client.CoreV1().Secrets("openshift-ingress").Get(ctx, "router-certs-default", metav1.GetOptions{})
 	if err != nil {
 		log.Printf(color.InRed("Error getting secret router-certs-defaults: %e"), err)
@@ -508,7 +508,7 @@ func (r *Registry) updateTrustCA(ctx context.Context, client *kubernetes.Clients
 	}
 
 	if err := os.WriteFile(r.RegistryPathCaCert, r.RegistryCaCertData, 0644); err != nil {
-		log.Printf(color.InRed("Error writing ca cert to %s: %e"), r.RegistryPathCaCert, err)
+		log.Printf(color.InRed("Error writing ca cert to %s: %s"), r.RegistryPathCaCert, err.Error())
 		return err
 	}
 
