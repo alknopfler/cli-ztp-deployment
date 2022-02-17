@@ -8,6 +8,7 @@ import (
 	a "github.com/containers/common/pkg/auth"
 	"github.com/containers/image/v5/types"
 	"github.com/openshift/oc/pkg/cli/image/manifest"
+	"time"
 
 	adm "github.com/openshift/oc/pkg/cli/admin/release"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
@@ -35,13 +36,33 @@ func (r *Registry) RunMirrorOcp() error {
 		return err
 	}
 	log.Println(color.InGreen("[INFO] login to registry successful"))
-
+	r.login2(ctx)
 	if r.mirrorOcp(ctx) != nil {
 		log.Printf(color.InRed("[ERROR] mirroring the OCP image: %e"), err)
 		return err
 	}
+	time.Sleep(time.Minute * 1)
 	log.Println(color.InGreen("[INFO] mirroring the OCP image successful"))
 	return nil
+}
+func (r *Registry) login2(ctx context.Context) error {
+	args := []string{r.RegistryRoute}
+	loginOpts := a.LoginOptions{
+		Password:      r.RegistryPass,
+		Username:      r.RegistryUser,
+		StdinPassword: false,
+		GetLoginSet:   false,
+		//Verbose:                   false,
+		//AcceptRepositories:        true,
+		Stdin:                     os.Stdin,
+		Stdout:                    os.Stdout,
+		AcceptUnspecifiedRegistry: true,
+	}
+	sysCtx := &types.SystemContext{
+		DockerInsecureSkipTLSVerify: types.NewOptionalBool(true),
+	}
+	return a.Login(ctx, sysCtx, &loginOpts, args)
+
 }
 
 func (r *Registry) login(ctx context.Context) error {
@@ -70,8 +91,10 @@ func (r *Registry) login(ctx context.Context) error {
 
 func (r *Registry) mirrorOcp(ctx context.Context) error {
 	opt := adm.MirrorOptions{
-		IOStreams:       genericclioptions.IOStreams{In: os.Stdin, Out: os.Stdout, ErrOut: os.Stderr},
-		SecurityOptions: manifest.SecurityOptions{},
+		IOStreams: genericclioptions.IOStreams{In: os.Stdin, Out: os.Stdout, ErrOut: os.Stderr},
+		SecurityOptions: manifest.SecurityOptions{
+			RegistryConfig: r.PullSecretTempFile,
+		},
 		ParallelOptions: manifest.ParallelOptions{},
 		From:            r.RegistryOCPReleaseImage,
 		To:              r.RegistryRoute + "/" + r.RegistryOCPDestIndexNS,
@@ -81,5 +104,7 @@ func (r *Registry) mirrorOcp(ctx context.Context) error {
 		ImageStream:     nil,
 		TargetFn:        nil,
 	}
+	opt.Validate()
+
 	return opt.Run()
 }
