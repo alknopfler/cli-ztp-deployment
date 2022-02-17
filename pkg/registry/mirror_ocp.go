@@ -32,13 +32,13 @@ func (r *Registry) RunMirrorOcp() error {
 	}
 	r.RegistryRoute = regName
 	if r.login(ctx) != nil {
-		log.Printf(color.InRed("[ERROR] login to registry: %e"), err)
+		log.Printf(color.InRed("[ERROR] login to registry: %s"), err.Error())
 		return err
 	}
 	log.Println(color.InGreen("[INFO] login to registry successful"))
 	r.login2(ctx)
 	if r.mirrorOcp(ctx) != nil {
-		log.Printf(color.InRed("[ERROR] mirroring the OCP image: %e"), err)
+		log.Printf(color.InRed("[ERROR] mirroring the OCP image: %s"), err.Error())
 		return err
 	}
 	time.Sleep(time.Minute * 1)
