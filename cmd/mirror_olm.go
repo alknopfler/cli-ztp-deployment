@@ -12,7 +12,7 @@ func NewMirrorOlm() *cobra.Command {
 	var r *registry.Registry
 	var mode string
 	cmd := &cobra.Command{
-		Use:   "ocp",
+		Use:   "olm",
 		Short: "Mirroring the OLM operators to the registry deployed based on mode (hub or spoke)",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if mode != config.MODE_HUB && mode != config.MODE_SPOKE {
@@ -33,7 +33,7 @@ func NewVerifyMirrorOlm() *cobra.Command {
 	var r *registry.Registry
 	var mode string
 	cmd := &cobra.Command{
-		Use:   "mirror-ocp",
+		Use:   "mirror-olm",
 		Short: "Verify if the OLM operators are successful based on mode (hub or spoke)",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if mode != config.MODE_HUB && mode != config.MODE_SPOKE {
