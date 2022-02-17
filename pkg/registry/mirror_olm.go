@@ -20,7 +20,7 @@ func (r *Registry) RunMirrorOlm() error {
 	//dynamicClient := auth.NewZTPAuth(config.GetKubeconfigFromMode(r.Mode)).GetAuthWithGeneric()
 	//ocpclient := auth.NewZTPAuth(config.GetKubeconfigFromMode(r.Mode)).GetRouteAuth()
 
-	wgMirrorOLM.Add(2)
+	wgMirrorOLM.Add(3)
 
 	//Update Trust CA if not present (tekton  use case)
 	go func() error {
@@ -39,6 +39,18 @@ func (r *Registry) RunMirrorOlm() error {
 			return err
 		}
 		wgMirrorOLM.Done()
+		return nil
+	}()
+
+	//Login to the registry (tekton use case)
+	go func() error {
+		//Login to the registry to grab the authfile with the new registry credentials
+		err := r.Login(ctx)
+		if err != nil {
+			log.Printf(color.InRed("[ERROR] login to registry: %s"), err.Error())
+			return err
+		}
+		log.Println(color.InGreen("[INFO] login to registry successful"))
 		return nil
 	}()
 
