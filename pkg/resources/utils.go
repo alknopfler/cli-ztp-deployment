@@ -2,6 +2,7 @@ package resources
 
 import (
 	"context"
+	"github.com/TwiN/go-color"
 	apiroutev1 "github.com/openshift/api/route/v1"
 	routev1 "github.com/openshift/client-go/route/clientset/versioned/typed/route/v1"
 	appsv1 "k8s.io/api/apps/v1"
@@ -9,6 +10,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
+	"log"
 	"time"
 )
 
@@ -69,5 +71,21 @@ func WaitForPVC(ctx context.Context, client *kubernetes.Clientset, pvc *v1.Persi
 		}
 		return false, nil
 	})
+	return err
+}
+
+func Retry(attempts int, sleep time.Duration, f func() error) (err error) {
+	for i := 0; i < attempts; i++ {
+		if i > 0 {
+			log.Printf(color.InYellow("[INFO] Doing a new attempt. Attempt number: %d"), i)
+			time.Sleep(sleep)
+			sleep *= 2
+		}
+		err = f()
+		if err == nil {
+			return nil
+		}
+	}
+	log.Printf(color.InYellow("after %d attempts, last error: %s"), attempts, err.Error())
 	return err
 }

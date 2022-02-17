@@ -5,13 +5,13 @@ import (
 	"github.com/TwiN/go-color"
 	"github.com/alknopfler/cli-ztp-deployment/config"
 	"github.com/alknopfler/cli-ztp-deployment/pkg/auth"
+	"github.com/alknopfler/cli-ztp-deployment/pkg/resources"
 	a "github.com/containers/common/pkg/auth"
 	"github.com/containers/image/v5/types"
-	"github.com/openshift/oc/pkg/cli/image/manifest"
-	"time"
-
 	adm "github.com/openshift/oc/pkg/cli/admin/release"
+	"github.com/openshift/oc/pkg/cli/image/manifest"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
+	"time"
 
 	"log"
 	"os"
@@ -36,33 +36,16 @@ func (r *Registry) RunMirrorOcp() error {
 		return err
 	}
 	log.Println(color.InGreen("[INFO] login to registry successful"))
-	r.login2(ctx)
-	if r.mirrorOcp(ctx) != nil {
+
+	err = resources.Retry(4, 1*time.Minute, func() (err error) {
+		return r.mirrorOcp(ctx)
+	})
+	if err != nil {
 		log.Printf(color.InRed("[ERROR] mirroring the OCP image: %s"), err.Error())
 		return err
 	}
-	time.Sleep(time.Minute * 1)
 	log.Println(color.InGreen("[INFO] mirroring the OCP image successful"))
 	return nil
-}
-func (r *Registry) login2(ctx context.Context) error {
-	args := []string{r.RegistryRoute}
-	loginOpts := a.LoginOptions{
-		Password:      r.RegistryPass,
-		Username:      r.RegistryUser,
-		StdinPassword: false,
-		GetLoginSet:   false,
-		//Verbose:                   false,
-		//AcceptRepositories:        true,
-		Stdin:                     os.Stdin,
-		Stdout:                    os.Stdout,
-		AcceptUnspecifiedRegistry: true,
-	}
-	sysCtx := &types.SystemContext{
-		DockerInsecureSkipTLSVerify: types.NewOptionalBool(true),
-	}
-	return a.Login(ctx, sysCtx, &loginOpts, args)
-
 }
 
 func (r *Registry) login(ctx context.Context) error {
