@@ -102,18 +102,18 @@ func (f *FileServer) createDeployment(ctx context.Context, client kubernetes.Cli
 					Spec: apiv1.PodSpec{
 						Volumes: []apiv1.Volume{
 							{
-								Name: "httpd-pv-storage",
+								Name: HTTPD_VOLUME_NAME,
 								VolumeSource: apiv1.VolumeSource{
 									PersistentVolumeClaim: &apiv1.PersistentVolumeClaimVolumeSource{
-										ClaimName: "httpd-pv-claim",
+										ClaimName: HTTPD_PVC_NAME,
 									},
 								},
 							},
 						},
 						Containers: []apiv1.Container{
 							{
-								Name:  "nginx",
-								Image: "quay.io/openshift-scale/nginx:latest",
+								Name:  "httpd",
+								Image: DEFAULT_IMAGE_NAME,
 								Ports: []apiv1.ContainerPort{
 									{
 										ContainerPort: 8080,
@@ -121,8 +121,8 @@ func (f *FileServer) createDeployment(ctx context.Context, client kubernetes.Cli
 								},
 								VolumeMounts: []apiv1.VolumeMount{
 									{
-										Name:      "httpd-pv-storage",
-										MountPath: "/usr/share/nginx/html",
+										Name:      HTTPD_VOLUME_NAME,
+										MountPath: DEFAULT_MOUNT_PATH,
 									},
 								},
 							},
@@ -156,7 +156,7 @@ func (f *FileServer) createRoute(ctx context.Context, client routev1.RouteV1Clie
 		route := apiroutev1.Route{
 			ObjectMeta: metav1.ObjectMeta{
 				Labels: map[string]string{
-					"app": "nginx",
+					"app": "httpd",
 				},
 				Name:      "httpd-server-route",
 				Namespace: HTTPD_NAMESPACE,
@@ -205,16 +205,16 @@ func (f *FileServer) createService(ctx context.Context, client kubernetes.Client
 			},
 			Spec: coreV1.ServiceSpec{
 				Selector: map[string]string{
-					"app": "nginx",
+					"app": "httpd",
 				},
 				Type: "ClusterIP",
 				Ports: []coreV1.ServicePort{
 					{
-						Port:     80,
+						Port:     DEFAULT_PORT,
 						Protocol: coreV1.ProtocolTCP,
 						TargetPort: intstr.IntOrString{
 							Type:   intstr.Int,
-							IntVal: 8080,
+							IntVal: DEFAULT_TARGETPORT,
 						},
 					},
 				},
@@ -244,13 +244,13 @@ func (f *FileServer) createPVC(ctx context.Context, client kubernetes.Clientset)
 		log.Println(color.InBold(color.InYellow(">>>> Creating PVC HTTPD")))
 		pvc := &apiv1.PersistentVolumeClaim{
 			ObjectMeta: metav1.ObjectMeta{
-				Name: "httpd-pv-claim",
+				Name: HTTPD_PVC_NAME,
 			},
 			Spec: apiv1.PersistentVolumeClaimSpec{
 				AccessModes: []apiv1.PersistentVolumeAccessMode{apiv1.ReadWriteOnce},
 				Resources: apiv1.ResourceRequirements{
 					Requests: apiv1.ResourceList{
-						apiv1.ResourceName(apiv1.ResourceStorage): resource.MustParse("5Gi"),
+						apiv1.ResourceName(apiv1.ResourceStorage): resource.MustParse(DEFAULT_SIZE),
 					},
 				},
 			},

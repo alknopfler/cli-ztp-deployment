@@ -13,7 +13,8 @@ import (
 )
 
 const (
-	DEFAULT_MOUNT_PATH         = "/usr/share/nginx/html"
+	DEFAULT_MOUNT_PATH         = "/var/www/html"
+	DEFAULT_IMAGE_NAME         = "registry.access.redhat.com/rhscl/httpd-24-rhel7:latest"
 	DEFAULT_SIZE               = "5Gi"
 	DEFAULT_PORT               = 80
 	DEFAULT_TARGETPORT         = 8080
@@ -24,6 +25,7 @@ const (
 	INGRESS_CONTROLLER_NS      = "openshift-ingress-operator"
 	INGRESS_CONTROLLER_NAME    = "default"
 	HTTPD_NAMESPACE            = "default"
+	HTTPD_VOLUME_NAME          = "httpd-pv-storage"
 	HTTPD_PVC_NAME             = "httpd-pv-claim"
 	HTTPD_DEPLOYMENT_NAME      = "nginx"
 )
