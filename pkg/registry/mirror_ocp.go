@@ -2,13 +2,16 @@ package registry
 
 import (
 	"context"
+	"github.com/TwiN/go-color"
 	"github.com/alknopfler/cli-ztp-deployment/config"
 	"github.com/alknopfler/cli-ztp-deployment/pkg/auth"
 	a "github.com/containers/common/pkg/auth"
 	"github.com/containers/image/v5/types"
-	adm "github.com/openshift/oc/pkg/cli/admin/release"
 	"github.com/openshift/oc/pkg/cli/image/manifest"
+
+	adm "github.com/openshift/oc/pkg/cli/admin/release"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
+
 	"log"
 	"os"
 )
@@ -44,14 +47,14 @@ func (r *Registry) RunMirrorOcp() error {
 func (r *Registry) login(ctx context.Context) error {
 	args := []string{r.RegistryRoute}
 	loginOpts := a.LoginOptions{
-		AuthFile:                  r.PullSecretTempFile,
-		CertDir:                   r.RegistryPathCaCert,
-		Password:                  r.RegistryPass,
-		Username:                  r.RegistryUser,
-		StdinPassword:             false,
-		GetLoginSet:               false,
-		Verbose:                   false,
-		AcceptRepositories:        true,
+		AuthFile:      r.PullSecretTempFile,
+		CertDir:       r.RegistryPathCaCert,
+		Password:      r.RegistryPass,
+		Username:      r.RegistryUser,
+		StdinPassword: false,
+		GetLoginSet:   false,
+		//Verbose:                   false,
+		//AcceptRepositories:        true,
 		Stdin:                     os.Stdin,
 		Stdout:                    os.Stdout,
 		AcceptUnspecifiedRegistry: true,
@@ -75,7 +78,6 @@ func (r *Registry) mirrorOcp(ctx context.Context) error {
 		ToRelease:       r.RegistryRoute + "/" + r.RegistryOCPDestIndexNS + ":" + config.Ztp.Config.OcOCPTag,
 		SkipRelease:     false,
 		DryRun:          false,
-		ClientFn:        nil,
 		ImageStream:     nil,
 		TargetFn:        nil,
 	}
