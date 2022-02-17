@@ -22,6 +22,7 @@ type Registry struct {
 	RegistryRoute               string
 	RegistryOCPReleaseImage     string
 	RegistryOCPDestIndexNS      string
+	RegistryOLMDestIndexNS      string
 	RegistrySrcPkg              string
 	RegistrySrcPkgFormatted     string
 	RegistryExtraImages         string
@@ -59,6 +60,7 @@ func NewRegistry(mode string) *Registry {
 		RegistryRoute:               "",
 		RegistryConfigFile:          "config.yml",
 		RegistryOCPDestIndexNS:      "ocp4/openshift4",
+		RegistryOLMDestIndexNS:      "olm/redhat-operator-index",
 		RegistryOCPReleaseImage:     "quay.io/openshift-release-dev/ocp-release:" + config.Ztp.Config.OcOCPTag,
 		RegistrySrcPkg:              "kubernetes-nmstate-operator,metallb-operator,ocs-operator,local-storage-operator,advanced-cluster-management",
 		RegistrySrcPkgFormatted:     "kubernetes-nmstate-operator metallb-operator ocs-operator local-storage-operator advanced-cluster-management",

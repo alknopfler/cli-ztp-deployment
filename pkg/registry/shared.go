@@ -6,13 +6,16 @@ import (
 	"fmt"
 	"github.com/TwiN/go-color"
 	"github.com/alknopfler/cli-ztp-deployment/config"
+	"github.com/alknopfler/cli-ztp-deployment/pkg/auth"
 	a "github.com/containers/common/pkg/auth"
 	"github.com/containers/image/v5/types"
+	"github.com/operator-framework/api/pkg/operators/v1alpha1"
 	"io/ioutil"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"log"
 	"os"
+	"time"
 )
 
 //Func Login to log into the new registry
@@ -74,5 +77,36 @@ func (r *Registry) UpdateTrustCA(ctx context.Context, client *kubernetes.Clients
 		return fmt.Errorf(color.InRed("No certs appended, using system certs only"))
 	}
 	log.Println(color.InGreen(">>>> [OK] Updated trust ca."))
+	return nil
+}
+
+func (r *Registry) CreateCatalogSource(ctx context.Context, client *kubernetes.Clientset) error {
+	log.Println(color.InYellow(">>>> Creating catalog source."))
+	olmclient := auth.NewZTPAuth(config.GetKubeconfigFromMode(r.Mode)).GetOlmAuth()
+
+	catalogSource := &v1alpha1.CatalogSource{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      r.OcDisCatalog,
+			Namespace: r.MarketNS,
+		},
+		Spec: v1alpha1.CatalogSourceSpec{
+			SourceType:  v1alpha1.SourceTypeGrpc,
+			Image:       r.RegistryRoute + "/" + r.RegistryOLMDestIndexNS + ":v" + config.Ztp.Config.OcOCPVersion,
+			DisplayName: r.OcDisCatalog,
+			Publisher:   r.OcDisCatalog,
+			UpdateStrategy: &v1alpha1.UpdateStrategy{
+				&v1alpha1.RegistryPoll{
+					Interval: &metav1.Duration{Duration: time.Minute * 30},
+				},
+			},
+		},
+	}
+	//create catalog source
+	_, err := olmclient.CatalogSources(r.MarketNS).Create(ctx, catalogSource, metav1.CreateOptions{})
+	if err != nil {
+		log.Printf(color.InRed("[ERROR] Error creating catalog source: %s"), err.Error())
+		return err
+	}
+
 	return nil
 }
