@@ -38,7 +38,7 @@ func (r *Registry) RunMirrorOcp() error {
 	log.Println(color.InGreen("[INFO] login to registry successful"))
 
 	err = resources.Retry(4, 1*time.Minute, func() (err error) {
-		return r.mirrorOcp(ctx)
+		return r.mirrorOcp()
 	})
 	if err != nil {
 		log.Printf(color.InRed("[ERROR] mirroring the OCP image: %s"), err.Error())
@@ -72,7 +72,7 @@ func (r *Registry) login(ctx context.Context) error {
 
 }
 
-func (r *Registry) mirrorOcp(ctx context.Context) error {
+func (r *Registry) mirrorOcp() error {
 	opt := adm.MirrorOptions{
 		IOStreams: genericclioptions.IOStreams{In: os.Stdin, Out: os.Stdout, ErrOut: os.Stderr},
 		SecurityOptions: manifest.SecurityOptions{
