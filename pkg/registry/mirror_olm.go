@@ -61,25 +61,24 @@ func (r *Registry) RunMirrorOlm() error {
 			log.Printf(color.InRed("[ERROR] login to registry: %s"), err.Error())
 			return err
 		}
-		log.Println(color.InGreen("[INFO] login to registry successful"))
+		log.Println(color.InGreen("[INFO] Login to registry successful"))
 		wgMirrorOLM.Done()
 		return nil
 	}()
 	wgMirrorOLM.Wait()
 
-	errMirrorOlm := r.mirrorOlm()
+	errMirrorOlm := r.PruneCatalog()
 	if errMirrorOlm != nil {
-		log.Printf(color.InRed("[ERROR] Error mirroring the olm: %s"), errMirrorOlm.Error())
+		log.Printf(color.InRed("[ERROR] Error pruning the olm catalog: %s"), errMirrorOlm.Error())
 		return errMirrorOlm
 	}
 
 	return nil
 }
 
-func (r *Registry) mirrorOlm() error {
+func (r *Registry) PruneCatalog() error {
 
 	//TODO For to parallelize the mirroring of the olm with goroutines
-
 	logger := logrus.WithFields(logrus.Fields{"packages": r.RegistrySrcPkg})
 
 	logger.Info(color.InYellow("[INFO] >>>> Pruning the index"))
