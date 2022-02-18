@@ -10,6 +10,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
+	"os/exec"
 
 	"log"
 
@@ -38,8 +39,8 @@ func (p *Preflight) RunPreflights() error {
 	client := auth.NewZTPAuth(config.Ztp.Config.KubeconfigHUB).GetAuth()
 	dynamicClient := auth.NewZTPAuth(config.Ztp.Config.KubeconfigHUB).GetAuthWithGeneric()
 
-	wg.Add(4)
-	var errNodes, errPVS, errCO, errMetal3 error
+	wg.Add(7)
+	var errNodes, errPVS, errCO, errMetal3, errCommands error
 	go func() {
 		errNodes = p.verifyNodes(*client, ctx)
 	}()
@@ -52,9 +53,18 @@ func (p *Preflight) RunPreflights() error {
 	go func() {
 		errMetal3 = p.verifyMetal3Pods(*client, ctx)
 	}()
+	go func() {
+		errCommands = p.verifyCommand("podman")
+	}()
+	go func() {
+		errCommands = p.verifyCommand("oc")
+	}()
+	go func() {
+		errCommands = p.verifyCommand("skopeo")
+	}()
 	wg.Wait()
 
-	if errNodes != nil || errPVS != nil || errCO != nil || errMetal3 != nil {
+	if errNodes != nil || errPVS != nil || errCO != nil || errMetal3 != nil || errCommands != nil {
 		return errors.New(color.InRed("[ERROR] Preflights failed"))
 	}
 	return nil
@@ -121,5 +131,20 @@ func (p *Preflight) verifyMetal3Pods(client kubernetes.Clientset, ctx context.Co
 		return errors.New("[ERROR] Metal3 pods insufficient...Exiting")
 	}
 	log.Println(color.InGreen(">>>>[OK] Metal3 pods validated"))
+	return nil
+}
+
+func (p *Preflight) verifyCommand(command string) error {
+	defer wg.Done()
+	return isCommandAvailable(command)
+}
+
+func isCommandAvailable(name string) error {
+	cmd := exec.Command("command", "-v", name)
+	if err := cmd.Run(); err != nil {
+		log.Println(color.InRed("[ERROR] '" + name + " is not installed...Exiting"))
+		return err
+	}
+	log.Println(color.InGreen(">>>>[OK] Command '" + name + "' installed and validated"))
 	return nil
 }

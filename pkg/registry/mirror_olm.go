@@ -5,6 +5,9 @@ import (
 	"github.com/TwiN/go-color"
 	"github.com/alknopfler/cli-ztp-deployment/config"
 	"github.com/alknopfler/cli-ztp-deployment/pkg/auth"
+	"github.com/operator-framework/operator-registry/pkg/containertools"
+	"github.com/operator-framework/operator-registry/pkg/lib/indexer"
+	"github.com/sirupsen/logrus"
 	"log"
 	"sync"
 )
@@ -18,7 +21,16 @@ func (r *Registry) RunMirrorOlm() error {
 	//get client from kubeconfig extracted based on Mode (HUB or SPOKE)
 	client := auth.NewZTPAuth(config.GetKubeconfigFromMode(r.Mode)).GetAuth()
 	//dynamicClient := auth.NewZTPAuth(config.GetKubeconfigFromMode(r.Mode)).GetAuthWithGeneric()
-	//ocpclient := auth.NewZTPAuth(config.GetKubeconfigFromMode(r.Mode)).GetRouteAuth()
+	ocpclient := auth.NewZTPAuth(config.GetKubeconfigFromMode(r.Mode)).GetRouteAuth()
+
+	//Get the registry route
+
+	regName, err := r.GetRegistryRouteName(ctx, ocpclient)
+	if err != nil {
+		log.Printf(color.InRed("[ERROR] getting the Route Name for the registry: %s"), err.Error())
+		return err
+	}
+	r.RegistryRoute = regName
 
 	wgMirrorOLM.Add(3)
 
@@ -51,10 +63,21 @@ func (r *Registry) RunMirrorOlm() error {
 			return err
 		}
 		log.Println(color.InGreen("[INFO] login to registry successful"))
+		wgMirrorOLM.Done()
 		return nil
 	}()
 
 	wgMirrorOLM.Wait()
+
+	return nil
+}
+
+func (r *Registry) mirrorOlm() error {
+
+	logger := logrus.WithFields(logrus.Fields{"packages": r.RegistrySrcPkg})
+
+	logger.Info("pruning the index")
+	indexer.NewIndexPruner(containertools.NewContainerTool("podman", containertools.PodmanTool), logger)
 
 	return nil
 }

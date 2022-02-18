@@ -42,7 +42,7 @@ func (r *Registry) RunMirrorOcp() error {
 
 	//Get the registry route
 	go func() error {
-		regName, err := r.getRegistryRouteName(ctx, ocpclient)
+		regName, err := r.GetRegistryRouteName(ctx, ocpclient)
 		if err != nil {
 			log.Printf(color.InRed("[ERROR] getting the Route Name for the registry: %s"), err.Error())
 			return err
