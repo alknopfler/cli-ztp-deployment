@@ -57,7 +57,7 @@ func NewFileServerDefault() *FileServer {
 func GetDomainFromCluster(client dynamic.Interface, ctx context.Context) string {
 	d, err := resources.NewGenericGet(ctx, client, INGRESS_CONTROLLER_GROUP, INGRESS_CONTROLLER_VERSION, INGRESS_CONTROLLER_KIND, INGRESS_CONTROLLER_NS, INGRESS_CONTROLLER_NAME, INGRESS_CONTROLLER_JQPATH).GetResourceByJq()
 	if err != nil {
-		log.Printf(color.InRed("[ERROR] Getting resources in GetDomainFromCluster: "), err)
+		log.Printf(color.InRed("[ERROR] Getting resources in GetDomainFromCluster: %s"), err.Error())
 		return "[ERROR GETTING DOMAIN]"
 	}
 	b, _ := json.Marshal(d)

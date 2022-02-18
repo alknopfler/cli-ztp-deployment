@@ -9,6 +9,7 @@ import (
 	"github.com/operator-framework/operator-registry/pkg/lib/indexer"
 	"github.com/sirupsen/logrus"
 	"log"
+	"os"
 	"sync"
 )
 
@@ -34,36 +35,34 @@ func (r *Registry) RunMirrorOlm() error {
 
 	wgMirrorOLM.Add(3)
 	//Update Trust CA if not present (tekton  use case)
-	go func() error {
+	go func() {
 		if err := r.UpdateTrustCA(ctx, client); err != nil {
 			log.Printf(color.InRed("[ERROR] Updating the ca for the mirror olm: %s"), err.Error())
-			return err
+			os.Exit(1)
 		}
 		wgMirrorOLM.Done()
-		return nil
 	}()
 
 	//Create the catalog source if not present
-	go func() error {
+	go func() {
 		if err := r.CreateCatalogSource(ctx); err != nil {
 			log.Printf(color.InRed("[ERROR] Error creating catalog source for the mirror olm: %s"), err.Error())
-			return err
+			os.Exit(1)
 		}
+		log.Println(color.InGreen("[INFO] Created the catalog source successfully"))
 		wgMirrorOLM.Done()
-		return nil
 	}()
 
 	//Login to the registry (tekton use case)
-	go func() error {
+	go func() {
 		//Login to the registry to grab the authfile with the new registry credentials
 		err := r.Login(ctx)
 		if err != nil {
 			log.Printf(color.InRed("[ERROR] login to registry: %s"), err.Error())
-			return err
+			os.Exit(1)
 		}
 		log.Println(color.InGreen("[INFO] Login to registry successful"))
 		wgMirrorOLM.Done()
-		return nil
 	}()
 	wgMirrorOLM.Wait()
 

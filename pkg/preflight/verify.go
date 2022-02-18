@@ -27,8 +27,6 @@ const (
 
 type Preflight struct{}
 
-var wg sync.WaitGroup
-
 //Run Preflight:
 // - Check if the conditions are ready or not
 // - Strategy: wait for all to get the error at the end in order to now where is the problem.
@@ -39,42 +37,81 @@ func (p *Preflight) RunPreflights() error {
 	client := auth.NewZTPAuth(config.Ztp.Config.KubeconfigHUB).GetAuth()
 	dynamicClient := auth.NewZTPAuth(config.Ztp.Config.KubeconfigHUB).GetAuthWithGeneric()
 
-	wg.Add(7)
-	var errNodes, errPVS, errCO, errMetal3, errCommands error
-	go func() {
-		errNodes = p.verifyNodes(*client, ctx)
-	}()
-	go func() {
-		errPVS = p.verifyPVS(*client, ctx)
-	}()
-	go func() {
-		errCO = p.verifyClusterOperators(dynamicClient, ctx)
-	}()
-	go func() {
-		errMetal3 = p.verifyMetal3Pods(*client, ctx)
-	}()
-	go func() {
-		errCommands = p.verifyCommand("podman")
-	}()
-	go func() {
-		errCommands = p.verifyCommand("oc")
-	}()
-	go func() {
-		errCommands = p.verifyCommand("skopeo")
-	}()
-	wg.Wait()
+	var wg sync.WaitGroup
+	fatalError := make(chan error)
+	wgDone := make(chan bool)
 
-	if errNodes != nil || errPVS != nil || errCO != nil || errMetal3 != nil || errCommands != nil {
-		return errors.New(color.InRed("[ERROR] Preflights failed"))
+	wg.Add(7)
+
+	go func() {
+		err := p.verifyNodes(*client, ctx)
+		if err != nil {
+			fatalError <- err
+		}
+		wg.Done()
+	}()
+	go func() {
+		err := p.verifyPVS(*client, ctx)
+		if err != nil {
+			fatalError <- err
+		}
+		wg.Done()
+	}()
+	go func() {
+		err := p.verifyClusterOperators(dynamicClient, ctx)
+		if err != nil {
+			fatalError <- err
+		}
+		wg.Done()
+	}()
+	go func() {
+		err := p.verifyMetal3Pods(*client, ctx)
+		if err != nil {
+			fatalError <- err
+		}
+		wg.Done()
+	}()
+	go func() {
+		err := p.verifyCommand("podman2")
+		if err != nil {
+			fatalError <- err
+		}
+		wg.Done()
+	}()
+	go func() {
+		err := p.verifyCommand("oc")
+		if err != nil {
+			fatalError <- err
+		}
+		wg.Done()
+	}()
+	go func() {
+		err := p.verifyCommand("skopeo")
+		if err != nil {
+			fatalError <- err
+		}
+		wg.Done()
+	}()
+
+	//func to wait for all goroutines to finish
+	go func() {
+		wg.Wait()
+		close(wgDone)
+	}()
+
+	//Select to wait for all goroutines to finish or for a fatal error
+	select {
+	case err := <-fatalError:
+		return err
+	case <-wgDone:
+		return nil
 	}
-	return nil
 }
 
 func (p *Preflight) verifyPVS(clientset kubernetes.Clientset, ctx context.Context) error {
-	defer wg.Done()
 	pvs, err := clientset.CoreV1().PersistentVolumes().List(ctx, metav1.ListOptions{})
 	if err != nil {
-		log.Printf(color.InRed("[ERROR] Error getting the PV info: %e"), err)
+		log.Printf(color.InRed("[ERROR] Error getting the PV info: %s"), err.Error())
 		return err
 	}
 
@@ -87,10 +124,9 @@ func (p *Preflight) verifyPVS(clientset kubernetes.Clientset, ctx context.Contex
 }
 
 func (p *Preflight) verifyNodes(clientset kubernetes.Clientset, ctx context.Context) error {
-	defer wg.Done()
 	nodes, err := clientset.CoreV1().Nodes().List(ctx, metav1.ListOptions{})
 	if err != nil {
-		log.Printf(color.InRed("[ERROR] Error getting Nodes info: %e"), err)
+		log.Printf(color.InRed("[ERROR] Error getting Nodes info: %s"), err.Error())
 		return err
 	}
 
@@ -103,10 +139,9 @@ func (p *Preflight) verifyNodes(clientset kubernetes.Clientset, ctx context.Cont
 }
 
 func (p *Preflight) verifyClusterOperators(client dynamic.Interface, ctx context.Context) error {
-	defer wg.Done()
 	co, err := resources.NewGenericList(ctx, client, CLUSTER_OPERATOR_GROUP, CLUSTER_OPERATOR_VERSION, CLUSTER_OPERATOR_RESOURCE, "", CONDITION_CO_READY).GetResourcesByJq()
 	if err != nil {
-		log.Println(color.InRed("[ERROR] Error getting cluster operators info: %e"), err)
+		log.Printf(color.InRed("[ERROR] Error getting cluster operators info: %s"), err.Error())
 		return err
 	}
 
@@ -119,10 +154,9 @@ func (p *Preflight) verifyClusterOperators(client dynamic.Interface, ctx context
 }
 
 func (p *Preflight) verifyMetal3Pods(client kubernetes.Clientset, ctx context.Context) error {
-	defer wg.Done()
 	metal, err := client.CoreV1().Pods(METAL3_NAMESPACE).List(ctx, metav1.ListOptions{})
 	if err != nil {
-		log.Println(color.InRed("[ERROR] Error getting pods about metal3: %e"), err)
+		log.Printf(color.InRed("[ERROR] Error getting pods about metal3: %s"), err.Error())
 		return err
 	}
 
@@ -135,7 +169,6 @@ func (p *Preflight) verifyMetal3Pods(client kubernetes.Clientset, ctx context.Co
 }
 
 func (p *Preflight) verifyCommand(command string) error {
-	defer wg.Done()
 	return isCommandAvailable(command)
 }
 

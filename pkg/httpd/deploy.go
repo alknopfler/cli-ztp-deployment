@@ -133,12 +133,12 @@ func (f *FileServer) createDeployment(ctx context.Context, client kubernetes.Cli
 		}
 		res, err := client.AppsV1().Deployments(HTTPD_NAMESPACE).Create(ctx, deployment, metav1.CreateOptions{})
 		if err != nil {
-			log.Printf(color.InRed("Error creating deployment: %e"), err)
+			log.Printf(color.InRed("Error creating deployment: %s"), err.Error())
 			return err
 		}
 		err = resources.WaitForDeployment(ctx, res, &client)
 		if err != nil {
-			log.Printf(color.InRed("[ERROR] waiting for deployment: %s"), err)
+			log.Printf(color.InRed("[ERROR] waiting for deployment: %s"), err.Error())
 			return err
 		}
 		log.Printf(color.InGreen(">>>> Created deployment %s\n"), res.GetObjectMeta().GetName())
@@ -179,12 +179,12 @@ func (f *FileServer) createRoute(ctx context.Context, client routev1.RouteV1Clie
 		}
 		res, err := client.Routes(HTTPD_NAMESPACE).Create(ctx, &route, metav1.CreateOptions{})
 		if err != nil {
-			log.Printf(color.InRed("Error creating route: %e"), err)
+			log.Printf(color.InRed("Error creating route: %s"), err.Error())
 			return err
 		}
 		err = resources.WaitForRoute(ctx, &client, res)
 		if err != nil {
-			log.Printf(color.InRed("[ERROR] waiting for route: %s"), err)
+			log.Printf(color.InRed("[ERROR] waiting for route: %s"), err.Error())
 			return err
 		}
 		log.Printf(color.InGreen(">>>> Created route %s\n"), res.GetObjectMeta().GetName())
@@ -223,12 +223,12 @@ func (f *FileServer) createService(ctx context.Context, client kubernetes.Client
 
 		res, err := client.CoreV1().Services(HTTPD_NAMESPACE).Create(ctx, serviceSpec, metav1.CreateOptions{})
 		if err != nil {
-			log.Printf(color.InRed("Error creating Service: %e"), err)
+			log.Printf(color.InRed("Error creating Service: %s"), err.Error())
 			return err
 		}
 		err = resources.WaitForService(ctx, &client, res)
 		if err != nil {
-			log.Printf(color.InRed("[ERROR] waiting for Service: %s"), err)
+			log.Printf(color.InRed("[ERROR] waiting for Service: %s"), err.Error())
 			return err
 		}
 		log.Printf(color.InGreen(">>>> Created Service %s\n"), res.GetObjectMeta().GetName())
@@ -257,12 +257,12 @@ func (f *FileServer) createPVC(ctx context.Context, client kubernetes.Clientset)
 		}
 		res, err := client.CoreV1().PersistentVolumeClaims(HTTPD_NAMESPACE).Create(ctx, pvc, metav1.CreateOptions{})
 		if err != nil {
-			log.Printf(color.InRed("Error creating Pvc: %e"), err)
+			log.Printf(color.InRed("Error creating Pvc: %s"), err.Error())
 			return err
 		}
 		err = resources.WaitForPVC(ctx, &client, res)
 		if err != nil {
-			log.Printf(color.InRed("[ERROR] waiting for Pvc: %s"), err)
+			log.Printf(color.InRed("[ERROR] waiting for Pvc: %s"), err.Error())
 			return err
 		}
 		log.Printf(color.InGreen(">>>> Created Pvc %s\n"), res.GetObjectMeta().GetName())

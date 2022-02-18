@@ -108,10 +108,10 @@ func (c *ZTPConfig) ReadFromConfigFile() error {
 	}
 
 	if getEnv("ZTP_CONFIGFILE") != "" {
-		fmt.Println(color.InYellow(">>>> ConfigFile env is not empty. Reading file from this env"))
+		fmt.Println(color.InYellow(">>>> [INFO] ConfigFile env is not empty. Reading file from this env"))
 		c.Config.ConfigFile = getEnv("ZTP_CONFIGFILE")
 	} else {
-		fmt.Println(color.InYellow(">>>> ZTP_CONFIGFILE env var is empty. Using default path: " + DEFAULT_CONFIG_FILE))
+		fmt.Println(color.InYellow(">>>> [INFO] ZTP_CONFIGFILE env var is empty. Using default path: " + DEFAULT_CONFIG_FILE))
 		c.Config.ConfigFile = DEFAULT_CONFIG_FILE
 	}
 

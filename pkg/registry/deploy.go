@@ -38,18 +38,18 @@ func (r *Registry) RunDeployRegistry() error {
 	//Step 1 - Create the namespace for the registry
 	err := r.createNamespace(ctx, client)
 	if err != nil {
-		log.Printf(color.InRed("Error creating Namespace for the registry: %v"), err)
+		log.Printf(color.InRed("Error creating Namespace for the registry: %s"), err.Error())
 		return err
 	}
 	//Step 2 - Create the secret and config map for the registry
 	err = r.createSecret(ctx, client)
 	if err != nil {
-		log.Printf(color.InRed("Error creating secret and config map for the registry: %v"), err)
+		log.Printf(color.InRed("Error creating secret and config map for the registry: %s"), err.Error())
 		return err
 	}
 	err = r.createConfigMap(ctx, client)
 	if err != nil {
-		log.Printf(color.InRed("Error creating secret and config map for the registry: %v"), err)
+		log.Printf(color.InRed("Error creating secret and config map for the registry: %s"), err.Error())
 		return err
 	}
 	// Step 3 - Create the rest of the manifests for the registry. We'll use goroutines to do this
@@ -58,7 +58,7 @@ func (r *Registry) RunDeployRegistry() error {
 		err := r.createDeployment(ctx, client)
 		wgDeployRegistry.Done()
 		if err != nil {
-			log.Fatalf("Error creating deployment: %v", err)
+			log.Fatalf("Error creating deployment: %s", err.Error())
 			return err
 		}
 		return nil
@@ -67,7 +67,7 @@ func (r *Registry) RunDeployRegistry() error {
 		err := r.createService(ctx, client)
 		wgDeployRegistry.Done()
 		if err != nil {
-			log.Fatalf("Error creating service: %v", err)
+			log.Fatalf("Error creating service: %s", err.Error())
 			return err
 		}
 		return nil
@@ -76,7 +76,7 @@ func (r *Registry) RunDeployRegistry() error {
 		err := r.createRoute(ctx, *ocpclient)
 		wgDeployRegistry.Done()
 		if err != nil {
-			log.Fatalf("Error creating route: %v", err)
+			log.Fatalf("Error creating route: %s", err.Error())
 			return err
 		}
 		return nil
@@ -85,7 +85,7 @@ func (r *Registry) RunDeployRegistry() error {
 		err := r.createPVC(ctx, *client)
 		wgDeployRegistry.Done()
 		if err != nil {
-			log.Fatalf("Error creating PVC: %v", err)
+			log.Fatalf("Error creating PVC: %s", err.Error())
 			return err
 		}
 		return nil
@@ -94,19 +94,19 @@ func (r *Registry) RunDeployRegistry() error {
 
 	err = r.UpdateTrustCA(ctx, client)
 	if err != nil {
-		log.Printf(color.InRed("Error updating the system CA with the new registry cert to be trusted: %v"), err)
+		log.Printf(color.InRed("Error updating the system CA with the new registry cert to be trusted: %s"), err.Error())
 		return err
 	}
 
 	err = r.createMachineConfig(ctx, dynamicClient)
 	if err != nil {
-		log.Printf(color.InRed("Error Creating the Machine Config: %v"), err)
+		log.Printf(color.InRed("Error Creating the Machine Config: %s"), err.Error())
 		return err
 	}
 
 	err = r.verifyMCP(ctx, dynamicClient)
 	if err != nil {
-		log.Printf(color.InRed("Error Waiting for the MCP to be updated in all hosts: %v"), err)
+		log.Printf(color.InRed("Error Waiting for the MCP to be updated in all hosts: %s"), err.Error())
 		return err
 	}
 
@@ -123,7 +123,7 @@ func (r *Registry) createNamespace(ctx context.Context, client *kubernetes.Clien
 		}
 		_, err := client.CoreV1().Namespaces().Create(ctx, nsName, metav1.CreateOptions{})
 		if err != nil {
-			log.Printf(color.InRed("Error creating namespace: %v"), err)
+			log.Printf(color.InRed("Error creating namespace: %s"), err.Error())
 			return err
 		}
 		log.Println(color.InGreen(">>>> Namespace for the registry created successfully"))
@@ -154,7 +154,7 @@ func (r *Registry) createSecret(ctx context.Context, client *kubernetes.Clientse
 
 		_, err := client.CoreV1().Secrets(r.RegistryNS).Create(ctx, secret, metav1.CreateOptions{})
 		if err != nil {
-			log.Printf(color.InRed("Error creating secret: %v"), err)
+			log.Printf(color.InRed("Error creating secret: %s"), err.Error())
 			return err
 		}
 		log.Println(color.InGreen(">>>> Secret for the registry created successfully"))
@@ -201,7 +201,7 @@ compatibility:
 		}
 		_, err := client.CoreV1().ConfigMaps(r.RegistryNS).Create(ctx, configMap, metav1.CreateOptions{})
 		if err != nil {
-			log.Printf(color.InRed("Error creating config map: %v"), err)
+			log.Printf(color.InRed("Error creating config map: %s"), err.Error())
 			return err
 		}
 		log.Println(color.InGreen(">>>> Config Map for the registry created successfully"))
@@ -338,12 +338,12 @@ func (r *Registry) createDeployment(ctx context.Context, client *kubernetes.Clie
 		}
 		res, err := client.AppsV1().Deployments(r.RegistryNS).Create(ctx, deployment, metav1.CreateOptions{})
 		if err != nil {
-			log.Printf(color.InRed("Error creating deployment: %e"), err)
+			log.Printf(color.InRed("Error creating deployment: %s"), err.Error())
 			return err
 		}
 		err = resources.WaitForDeployment(ctx, res, client)
 		if err != nil {
-			log.Printf(color.InRed("[ERROR] waiting for deployment: %s"), err)
+			log.Printf(color.InRed("[ERROR] waiting for deployment: %s"), err.Error())
 			return err
 		}
 		log.Printf(color.InGreen(">>>> Created deployment %s\n"), res.GetObjectMeta().GetName())
@@ -390,12 +390,12 @@ func (r *Registry) createService(ctx context.Context, client *kubernetes.Clients
 
 		res, err := client.CoreV1().Services(r.RegistryNS).Create(ctx, serviceSpec, metav1.CreateOptions{})
 		if err != nil {
-			log.Printf(color.InRed("Error creating Service: %e"), err)
+			log.Printf(color.InRed("Error creating Service: %s"), err.Error())
 			return err
 		}
 		err = resources.WaitForService(ctx, client, res)
 		if err != nil {
-			log.Printf(color.InRed("[ERROR] waiting for Service: %s"), err)
+			log.Printf(color.InRed("[ERROR] waiting for Service: %s"), err.Error())
 			return err
 		}
 		log.Printf(color.InGreen(">>>> Created Service %s\n"), res.GetObjectMeta().GetName())
@@ -435,12 +435,12 @@ func (r *Registry) createRoute(ctx context.Context, client routev1.RouteV1Client
 		}
 		res, err := client.Routes(r.RegistryNS).Create(ctx, &route, metav1.CreateOptions{})
 		if err != nil {
-			log.Printf(color.InRed("Error creating route: %e"), err)
+			log.Printf(color.InRed("Error creating route: %s"), err.Error())
 			return err
 		}
 		err = resources.WaitForRoute(ctx, &client, res)
 		if err != nil {
-			log.Printf(color.InRed("[ERROR] waiting for route: %s"), err)
+			log.Printf(color.InRed("[ERROR] waiting for route: %s"), err.Error())
 			return err
 		}
 		log.Printf(color.InGreen(">>>> Created route %s\n"), res.GetObjectMeta().GetName())
@@ -472,12 +472,12 @@ func (r *Registry) createPVC(ctx context.Context, client kubernetes.Clientset) e
 		}
 		res, err := client.CoreV1().PersistentVolumeClaims(r.RegistryNS).Create(ctx, pvc, metav1.CreateOptions{})
 		if err != nil {
-			log.Printf(color.InRed("Error creating Pvc: %e"), err)
+			log.Printf(color.InRed("Error creating Pvc: %s"), err.Error())
 			return err
 		}
 		err = resources.WaitForPVC(ctx, &client, res)
 		if err != nil {
-			log.Printf(color.InRed("[ERROR] waiting for Pvc: %s"), err)
+			log.Printf(color.InRed("[ERROR] waiting for Pvc: %s"), err.Error())
 			return err
 		}
 		log.Printf(color.InGreen(">>>> Created Pvc %s\n"), res.GetObjectMeta().GetName())

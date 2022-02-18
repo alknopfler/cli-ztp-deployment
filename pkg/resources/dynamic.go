@@ -122,20 +122,20 @@ func (g *Generic) GetResourceByJq() (unstructured.Unstructured, error) {
 
 	query, err := gojq.Parse(g.Jq)
 	if err != nil {
-		log.Printf(color.InRed("[ERROR] Error parsing jq: %e"), err)
+		log.Printf(color.InRed("[ERROR] Error parsing jq: %s"), err.Error())
 		return unstructured.Unstructured{}, err
 	}
 
 	item, err := g.GetResourceDynamically()
 	if err != nil {
-		log.Printf(color.InRed("[ERROR] Error getting resource: %e"), err)
+		log.Printf(color.InRed("[ERROR] Error getting resource: %s"), err.Error())
 		return unstructured.Unstructured{}, err
 	}
 
 	var rawJson interface{}
 	err = runtime.DefaultUnstructuredConverter.FromUnstructured(item.Object, &rawJson)
 	if err != nil {
-		log.Printf(color.InRed("[ERROR] Error converting resource to JSON: %e"), err)
+		log.Printf(color.InRed("[ERROR] Error converting resource to JSON: %s"), err.Error())
 		return unstructured.Unstructured{}, err
 	}
 
@@ -144,12 +144,12 @@ func (g *Generic) GetResourceByJq() (unstructured.Unstructured, error) {
 	for {
 		result, ok := iter.Next()
 		if !ok {
-			log.Printf(color.InRed("[ERROR] Error evaluating jq: %e"), err)
+			log.Printf(color.InRed("[ERROR] Error evaluating jq: %s"), err.Error())
 			return unstructured.Unstructured{}, err
 		}
 		if err, ok := result.(error); ok {
 			if err != nil {
-				log.Printf(color.InRed("[ERROR] Error evaluating jq to get result: %e"), err)
+				log.Printf(color.InRed("[ERROR] Error evaluating jq to get result: %s"), err.Error())
 				return unstructured.Unstructured{}, err
 			}
 		} else {
