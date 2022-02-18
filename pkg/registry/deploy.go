@@ -25,8 +25,6 @@ import (
 	"sync"
 )
 
-var wgDeployRegistry sync.WaitGroup
-
 func (r *Registry) RunDeployRegistry() error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -53,44 +51,60 @@ func (r *Registry) RunDeployRegistry() error {
 		return err
 	}
 	// Step 3 - Create the rest of the manifests for the registry. We'll use goroutines to do this
-	wgDeployRegistry.Add(4)
-	go func() error {
+	var wg sync.WaitGroup
+	wg.Add(4)
+	fatalErrors := make(chan error)
+	wgDone := make(chan bool)
+
+	go func() {
 		err := r.createDeployment(ctx, client)
-		wgDeployRegistry.Done()
 		if err != nil {
 			log.Fatalf("Error creating deployment: %s", err.Error())
-			return err
+			fatalErrors <- err
 		}
-		return nil
+		wg.Done()
 	}()
-	go func() error {
+
+	go func() {
 		err := r.createService(ctx, client)
-		wgDeployRegistry.Done()
 		if err != nil {
 			log.Fatalf("Error creating service: %s", err.Error())
-			return err
+			fatalErrors <- err
 		}
-		return nil
+		wg.Done()
 	}()
-	go func() error {
+	go func() {
 		err := r.createRoute(ctx, *ocpclient)
-		wgDeployRegistry.Done()
 		if err != nil {
 			log.Fatalf("Error creating route: %s", err.Error())
-			return err
+			fatalErrors <- err
 		}
-		return nil
+		wg.Done()
 	}()
-	go func() error {
+	go func() {
 		err := r.createPVC(ctx, *client)
-		wgDeployRegistry.Done()
 		if err != nil {
 			log.Fatalf("Error creating PVC: %s", err.Error())
-			return err
+			fatalErrors <- err
 		}
-		return nil
+		wg.Done()
 	}()
-	wgDeployRegistry.Wait()
+
+	// Important final goroutine to wait until WaitGroup is done
+	go func() {
+		wg.Wait()
+		close(wgDone)
+	}()
+
+	// Wait until either WaitGroup is done or an error is received through the channel
+	select {
+	case <-wgDone:
+		// carry on
+		break
+	case err := <-fatalErrors:
+		close(fatalErrors)
+		return err
+	}
 
 	err = r.UpdateTrustCA(ctx, client)
 	if err != nil {

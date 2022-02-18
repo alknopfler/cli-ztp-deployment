@@ -13,8 +13,6 @@ import (
 	"sync"
 )
 
-var wgVerifyHTTP sync.WaitGroup
-
 //Run Preflight:
 // - Check if the conditions are ready or not to be deployed or even verify if the resource is ready
 // - Strategy: wait for all to get the error at the end in order to now where is the problem.
@@ -25,7 +23,8 @@ func (f *FileServer) RunVerifyHttpd() {
 	client := auth.NewZTPAuth(config.Ztp.Config.KubeconfigHUB).GetAuth()
 	routeClient := auth.NewZTPAuth(config.Ztp.Config.KubeconfigHUB).GetRouteAuth()
 
-	wgVerifyHTTP.Add(4)
+	var wg sync.WaitGroup
+	wg.Add(4)
 	go func() {
 		found, err := f.verifyDeployment(ctx, *client)
 		if !found && err != nil {
@@ -35,7 +34,7 @@ func (f *FileServer) RunVerifyHttpd() {
 		} else {
 			log.Println(color.InGreen("[OK] Deployment httpd found and ready"))
 		}
-		wgVerifyHTTP.Done()
+		wg.Done()
 	}()
 	go func() {
 		found, err := f.verifyService(ctx, *client)
@@ -46,7 +45,7 @@ func (f *FileServer) RunVerifyHttpd() {
 		} else {
 			log.Println(color.InGreen("[OK] Service httpd found and ready"))
 		}
-		wgVerifyHTTP.Done()
+		wg.Done()
 	}()
 	go func() {
 		found, err := f.verifyRoute(ctx, *routeClient)
@@ -57,7 +56,7 @@ func (f *FileServer) RunVerifyHttpd() {
 		} else {
 			log.Println(color.InGreen("[OK] Route httpd found and ready"))
 		}
-		wgVerifyHTTP.Done()
+		wg.Done()
 	}()
 	go func() {
 		found, err := f.verifyPVC(ctx, *client)
@@ -68,9 +67,9 @@ func (f *FileServer) RunVerifyHttpd() {
 		} else {
 			log.Println(color.InGreen("[OK] PVC httpd found and ready"))
 		}
-		wgVerifyHTTP.Done()
+		wg.Done()
 	}()
-	wgVerifyHTTP.Wait()
+	wg.Wait()
 }
 
 func (f *FileServer) verifyDeployment(ctx context.Context, client kubernetes.Clientset) (found bool, err error) {

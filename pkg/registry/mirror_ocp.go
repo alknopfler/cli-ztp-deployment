@@ -17,8 +17,6 @@ import (
 	"os"
 )
 
-var wgMirrorOCP sync.WaitGroup
-
 func (r *Registry) RunMirrorOcp() error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -28,31 +26,45 @@ func (r *Registry) RunMirrorOcp() error {
 	//dynamicClient := auth.NewZTPAuth(config.GetKubeconfigFromMode(r.Mode)).GetAuthWithGeneric()
 	ocpclient := auth.NewZTPAuth(config.GetKubeconfigFromMode(r.Mode)).GetRouteAuth()
 
-	wgMirrorOCP.Add(2)
-
+	var wg sync.WaitGroup
+	wg.Add(2)
+	fatalErrors := make(chan error)
+	wgDone := make(chan bool)
 	//Update Trust CA if not present (tekton  use case)
-	go func() error {
+	go func() {
 		if err := r.UpdateTrustCA(ctx, client); err != nil {
 			log.Printf(color.InRed("[ERROR] Updating the ca for the mirror ocp: %s"), err.Error())
-			return err
+			fatalErrors <- err
 		}
-		wgMirrorOCP.Done()
-		return nil
+		wg.Done()
 	}()
 
 	//Get the registry route
-	go func() error {
+	go func() {
 		regName, err := r.GetRegistryRouteName(ctx, ocpclient)
 		if err != nil {
 			log.Printf(color.InRed("[ERROR] getting the Route Name for the registry: %s"), err.Error())
-			return err
+			fatalErrors <- err
 		}
 		r.RegistryRoute = regName
-		wgMirrorOCP.Done()
-		return nil
+		wg.Done()
 	}()
 
-	wgVerifyRegistry.Wait()
+	// Important final goroutine to wait until WaitGroup is done
+	go func() {
+		wg.Wait()
+		close(wgDone)
+	}()
+
+	// Wait until either WaitGroup is done or an error is received through the channel
+	select {
+	case <-wgDone:
+		// carry on
+		break
+	case err := <-fatalErrors:
+		close(fatalErrors)
+		return err
+	}
 
 	//Login to the registry to grab the authfile with the new registry credentials
 	err := r.Login(ctx)

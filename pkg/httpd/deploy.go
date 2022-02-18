@@ -22,8 +22,6 @@ import (
 	"log"
 )
 
-var wgDeployHTTPD sync.WaitGroup
-
 //Run deploy HTTPD:
 // - Launch all resources to be created at the same time
 // - Strategy: First fail (if any resource fails to be created)
@@ -34,45 +32,59 @@ func (f *FileServer) RunDeployHttpd() error {
 	dynamicClient := auth.NewZTPAuth(config.Ztp.Config.KubeconfigHUB).GetAuthWithGeneric()
 	ocpclient := auth.NewZTPAuth(config.Ztp.Config.KubeconfigHUB).GetRouteAuth()
 
-	wgDeployHTTPD.Add(4)
-	go func() error {
+	fatalErrors := make(chan error)
+	wgDone := make(chan bool)
+	var wg sync.WaitGroup
+	wg.Add(4)
+
+	go func() {
 		err := f.createDeployment(ctx, *client)
-		wgDeployHTTPD.Done()
 		if err != nil {
 			log.Fatalf("Error creating deployment: %v", err)
-			return err
+			fatalErrors <- err
 		}
-		return nil
+		wg.Done()
 	}()
-	go func() error {
+	go func() {
 		err := f.createService(ctx, *client)
-		wgDeployHTTPD.Done()
 		if err != nil {
 			log.Fatalf("Error creating service: %v", err)
-			return err
+			fatalErrors <- err
 		}
-		return nil
+		wg.Done()
 	}()
-	go func() error {
+	go func() {
 		err := f.createRoute(ctx, *ocpclient, dynamicClient)
-		wgDeployHTTPD.Done()
 		if err != nil {
 			log.Fatalf("Error creating route: %v", err)
-			return err
+			fatalErrors <- err
 		}
-		return nil
+		wg.Done()
 	}()
-	go func() error {
+	go func() {
 		err := f.createPVC(ctx, *client)
-		wgDeployHTTPD.Done()
+
 		if err != nil {
 			log.Fatalf("Error creating PVC: %v", err)
-			return err
+			fatalErrors <- err
 		}
-		return nil
+		wg.Done()
 	}()
-	wgDeployHTTPD.Wait()
-	return nil
+
+	// Wait for all goroutines to finish
+	go func() {
+		wg.Wait()
+		close(wgDone)
+	}()
+
+	select {
+	case <-wgDone:
+		// carry on
+		return nil
+	case err := <-fatalErrors:
+		close(fatalErrors)
+		return err
+	}
 }
 
 //Func to create deployment

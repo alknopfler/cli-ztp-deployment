@@ -9,11 +9,8 @@ import (
 	"github.com/operator-framework/operator-registry/pkg/lib/indexer"
 	"github.com/sirupsen/logrus"
 	"log"
-	"os"
 	"sync"
 )
-
-var wgMirrorOLM sync.WaitGroup
 
 func (r *Registry) RunMirrorOlm() error {
 	ctx, cancel := context.WithCancel(context.Background())
@@ -33,24 +30,27 @@ func (r *Registry) RunMirrorOlm() error {
 	}
 	r.RegistryRoute = regName
 
-	wgMirrorOLM.Add(3)
+	var wg sync.WaitGroup
+	wg.Add(3)
+	fatalErrors := make(chan error)
+	wgDone := make(chan bool)
 	//Update Trust CA if not present (tekton  use case)
 	go func() {
 		if err := r.UpdateTrustCA(ctx, client); err != nil {
 			log.Printf(color.InRed("[ERROR] Updating the ca for the mirror olm: %s"), err.Error())
-			os.Exit(1)
+			fatalErrors <- err
 		}
-		wgMirrorOLM.Done()
+		wg.Done()
 	}()
 
 	//Create the catalog source if not present
 	go func() {
 		if err := r.CreateCatalogSource(ctx); err != nil {
 			log.Printf(color.InRed("[ERROR] Error creating catalog source for the mirror olm: %s"), err.Error())
-			os.Exit(1)
+			fatalErrors <- err
 		}
 		log.Println(color.InGreen("[INFO] Created the catalog source successfully"))
-		wgMirrorOLM.Done()
+		wg.Done()
 	}()
 
 	//Login to the registry (tekton use case)
@@ -59,12 +59,26 @@ func (r *Registry) RunMirrorOlm() error {
 		err := r.Login(ctx)
 		if err != nil {
 			log.Printf(color.InRed("[ERROR] login to registry: %s"), err.Error())
-			os.Exit(1)
+			fatalErrors <- err
 		}
 		log.Println(color.InGreen("[INFO] Login to registry successful"))
-		wgMirrorOLM.Done()
+		wg.Done()
 	}()
-	wgMirrorOLM.Wait()
+
+	go func() {
+		wg.Wait()
+		close(wgDone)
+	}()
+
+	// Wait until either WaitGroup is done or an error is received through the channel
+	select {
+	case <-wgDone:
+		// carry on
+		break
+	case err := <-fatalErrors:
+		close(fatalErrors)
+		return err
+	}
 
 	errMirrorOlm := r.PruneCatalog()
 	if errMirrorOlm != nil {
