@@ -34,6 +34,7 @@ func (r *Registry) RunMirrorOlm() error {
 	wg.Add(3)
 	fatalErrors := make(chan error)
 	wgDone := make(chan bool)
+
 	//Update Trust CA if not present (tekton  use case)
 	go func() {
 		if err := r.UpdateTrustCA(ctx, client); err != nil {
