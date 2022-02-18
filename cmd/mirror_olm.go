@@ -6,6 +6,7 @@ import (
 	"github.com/alknopfler/cli-ztp-deployment/config"
 	"github.com/alknopfler/cli-ztp-deployment/pkg/registry"
 	"github.com/spf13/cobra"
+	"os"
 )
 
 func NewMirrorOlm() *cobra.Command {
@@ -19,6 +20,8 @@ func NewMirrorOlm() *cobra.Command {
 				return errors.New(color.InRed("mode must be either hub or spoke"))
 			}
 			r = registry.NewRegistry(mode)
+			r.WritePullSecretBaseToTempFile(r.GetPullSecretBase())
+			defer os.Remove(r.PullSecretTempFile)
 			return r.RunMirrorOlm()
 		},
 	}
@@ -40,6 +43,8 @@ func NewVerifyMirrorOlm() *cobra.Command {
 				return errors.New(color.InRed("mode must be either hub or spoke"))
 			}
 			r = registry.NewRegistry(mode)
+			r.WritePullSecretBaseToTempFile(r.GetPullSecretBase())
+			defer os.Remove(r.PullSecretTempFile)
 			r.RunVerifyMirrorOlm()
 			return nil
 		},

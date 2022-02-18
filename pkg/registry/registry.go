@@ -33,8 +33,9 @@ type Registry struct {
 	RegistryOCPReleaseImage     string
 	RegistryOCPDestIndexNS      string
 	RegistryOLMDestIndexNS      string
+	RegistryOLMSourceIndex      string
 	RegistrySrcPkg              string
-	RegistrySrcPkgFormatted     string
+	RegistrySrcPkgFormatted     []string
 	RegistryExtraImages         string
 	OcDisCatalog                string
 	OcpReleaseFull              string
@@ -72,8 +73,9 @@ func NewRegistry(mode string) *Registry {
 		RegistryOCPDestIndexNS:      "ocp4/openshift4",
 		RegistryOLMDestIndexNS:      "olm/redhat-operator-index",
 		RegistryOCPReleaseImage:     "quay.io/openshift-release-dev/ocp-release:" + config.Ztp.Config.OcOCPTag,
+		RegistryOLMSourceIndex:      "registry.redhat.io/redhat/redhat-operator-index:v" + config.Ztp.Config.OcOCPVersion,
 		RegistrySrcPkg:              "kubernetes-nmstate-operator,metallb-operator,ocs-operator,local-storage-operator,advanced-cluster-management",
-		RegistrySrcPkgFormatted:     "kubernetes-nmstate-operator metallb-operator ocs-operator local-storage-operator advanced-cluster-management",
+		RegistrySrcPkgFormatted:     []string{"kubernetes-nmstate-operator", "metallb-operator ocs-operator", "local-storage-operator", "advanced-cluster-management"},
 		RegistryExtraImages:         "quay.io/jparrill/registry:2",
 		RegistryUser:                "dummy",
 		RegistryPass:                "dummy",

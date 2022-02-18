@@ -33,7 +33,6 @@ func (r *Registry) RunMirrorOlm() error {
 	r.RegistryRoute = regName
 
 	wgMirrorOLM.Add(3)
-
 	//Update Trust CA if not present (tekton  use case)
 	go func() error {
 		if err := r.UpdateTrustCA(ctx, client); err != nil {
@@ -66,18 +65,36 @@ func (r *Registry) RunMirrorOlm() error {
 		wgMirrorOLM.Done()
 		return nil
 	}()
-
 	wgMirrorOLM.Wait()
+
+	errMirrorOlm := r.mirrorOlm()
+	if errMirrorOlm != nil {
+		log.Printf(color.InRed("[ERROR] Error mirroring the olm: %s"), errMirrorOlm.Error())
+		return errMirrorOlm
+	}
 
 	return nil
 }
 
 func (r *Registry) mirrorOlm() error {
 
+	//TODO For to parallelize the mirroring of the olm with goroutines
+
 	logger := logrus.WithFields(logrus.Fields{"packages": r.RegistrySrcPkg})
 
-	logger.Info("pruning the index")
-	indexer.NewIndexPruner(containertools.NewContainerTool("podman", containertools.PodmanTool), logger)
+	logger.Info("[INFO] >>>> Pruning the index")
+	indexPruner := indexer.NewIndexPruner(containertools.NewContainerTool("podman", containertools.PodmanTool), logger)
 
+	request := indexer.PruneFromIndexRequest{
+		Generate:  true,
+		FromIndex: r.RegistryOLMSourceIndex,
+		Packages:  r.RegistrySrcPkgFormatted,
+		Tag:       r.RegistryRoute + "/" + r.RegistryOLMDestIndexNS + ":v" + config.Ztp.Config.OcOCPVersion,
+	}
+
+	err := indexPruner.PruneFromIndex(request)
+	if err != nil {
+		return err
+	}
 	return nil
 }

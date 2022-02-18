@@ -43,6 +43,8 @@ func NewVerifyMirrorOcp() *cobra.Command {
 				return errors.New(color.InRed("mode must be either hub or spoke"))
 			}
 			r = registry.NewRegistry(mode)
+			r.WritePullSecretBaseToTempFile(r.GetPullSecretBase())
+			defer os.Remove(r.PullSecretTempFile)
 			r.RunVerifyMirrorOcp()
 			return nil
 		},
