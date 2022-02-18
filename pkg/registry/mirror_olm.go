@@ -82,7 +82,7 @@ func (r *Registry) mirrorOlm() error {
 
 	logger := logrus.WithFields(logrus.Fields{"packages": r.RegistrySrcPkg})
 
-	logger.Info("[INFO] >>>> Pruning the index")
+	logger.Info(color.InYellow("[INFO] >>>> Pruning the index"))
 	indexPruner := indexer.NewIndexPruner(containertools.NewContainerTool("podman", containertools.PodmanTool), logger)
 
 	request := indexer.PruneFromIndexRequest{
