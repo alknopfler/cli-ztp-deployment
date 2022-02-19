@@ -8,10 +8,14 @@ import (
 	"github.com/alknopfler/cli-ztp-deployment/pkg/auth"
 	"github.com/alknopfler/cli-ztp-deployment/pkg/resources"
 	routev1 "github.com/openshift/client-go/route/clientset/versioned/typed/route/v1"
+	adm "github.com/openshift/oc/pkg/cli/admin/release"
+	"github.com/openshift/oc/pkg/cli/image/manifest"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/cli-runtime/pkg/genericclioptions"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	"log"
+	"os"
 	"sync"
 )
 
@@ -118,6 +122,86 @@ func (r *Registry) RunVerifyRegistry() {
 	wgVerifyRegistry.Wait()
 }
 
+func (r *Registry) RunVerifyMirrorOcp() {
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	//get client from kubeconfig extracted based on Mode (HUB or SPOKE)
+	client := auth.NewZTPAuth(config.GetKubeconfigFromMode(r.Mode)).GetAuth()
+	//dynamicClient := auth.NewZTPAuth(config.GetKubeconfigFromMode(r.Mode)).GetAuthWithGeneric()
+	ocpclient := auth.NewZTPAuth(config.GetKubeconfigFromMode(r.Mode)).GetRouteAuth()
+
+	var wg sync.WaitGroup
+	wg.Add(2)
+	fatalErrors := make(chan error)
+	wgDone := make(chan bool)
+
+	//Update Trust CA if not present (tekton  use case)
+	go func() {
+		if err := r.UpdateTrustCA(ctx, client); err != nil {
+			log.Printf(color.InRed("[ERROR] Updating the ca for the mirror ocp: %s"), err.Error())
+			fatalErrors <- err
+		}
+		wg.Done()
+	}()
+
+	//Get the registry route
+	go func() {
+		regName, err := r.GetRegistryRouteName(ctx, ocpclient)
+		if err != nil {
+			log.Printf(color.InRed("[ERROR] getting the Route Name for the registry: %s"), err.Error())
+			fatalErrors <- err
+		}
+		r.RegistryRoute = regName
+		wg.Done()
+	}()
+
+	// Important final goroutine to wait until WaitGroup is done
+	go func() {
+		wg.Wait()
+		close(wgDone)
+	}()
+
+	// Wait until either WaitGroup is done or an error is received through the channel
+	select {
+	case <-wgDone:
+		// carry on
+		break
+	case <-fatalErrors:
+		close(fatalErrors)
+		return
+	}
+
+	//Login to the registry to grab the authfile with the new registry credentials
+	err := r.Login(ctx)
+	if err != nil {
+		log.Printf(color.InRed("[ERROR] login to registry: %s"), err.Error())
+		return
+	}
+	log.Println(color.InGreen("[INFO] login to registry successful"))
+
+	//Verify the admin release info is present
+
+	err = r.verifyOCPReleaseMirror()
+	if err != nil {
+		log.Println(color.InRed("[ERROR] Admin release not found or with Errors"))
+	} else {
+		log.Println(color.InGreen("[OK] Admin release found and ready"))
+	}
+
+}
+
+func (r *Registry) RunVerifyMirrorOlm() {
+
+	/*ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	client := auth.NewZTPAuth(config.Ztp.Config.KubeconfigHUB).GetAuth()
+	routeClient := auth.NewZTPAuth(config.Ztp.Config.KubeconfigHUB).GetRouteAuth()
+
+	*/
+}
+
 func (r *Registry) verifyNamespace(ctx context.Context, client *kubernetes.Clientset) (bool, error) {
 	_, err := client.CoreV1().Namespaces().Get(ctx, r.RegistryNS, metav1.GetOptions{})
 	if err != nil {
@@ -215,22 +299,29 @@ func (r *Registry) verifyMachineConfig(ctx context.Context, client dynamic.Inter
 	return nil
 }
 
-func (r *Registry) RunVerifyMirrorOcp() {
+func (r *Registry) verifyOCPReleaseMirror() error {
+	opt := adm.InfoOptions{
+		IOStreams:       genericclioptions.IOStreams{In: os.Stdin, Out: os.Stdout, ErrOut: os.Stderr},
+		From:            r.RegistryRoute + "/" + r.RegistryOCPDestIndexNS + ":" + config.Ztp.Config.OcOCPTag,
+		FileDir:         "",
+		Output:          "",
+		ImageFor:        "",
+		IncludeImages:   false,
+		ShowContents:    false,
+		ShowCommit:      false,
+		ShowCommitURL:   false,
+		ShowPullSpec:    false,
+		ShowSize:        false,
+		Verify:          false,
+		ChangelogDir:    "",
+		BugsDir:         "",
+		SkipBugCheck:    false,
+		ParallelOptions: manifest.ParallelOptions{},
+		SecurityOptions: manifest.SecurityOptions{RegistryConfig: r.PullSecretTempFile},
+	}
 
-	/*ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	client := auth.NewZTPAuth(config.Ztp.Config.KubeconfigHUB).GetAuth()
-	routeClient := auth.NewZTPAuth(config.Ztp.Config.KubeconfigHUB).GetRouteAuth()
-
-	*/
-}
-
-func (r *Registry) RunVerifyMirrorOlm() {
-
-	/*ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	client := auth.NewZTPAuth(config.Ztp.Config.KubeconfigHUB).GetAuth()
-	routeClient := auth.NewZTPAuth(config.Ztp.Config.KubeconfigHUB).GetRouteAuth()
-
-	*/
+	if opt.Validate() != nil {
+		return opt.Validate()
+	}
+	return opt.Run()
 }
