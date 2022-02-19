@@ -184,7 +184,7 @@ func (r *Registry) CreateCatalogSource(ctx context.Context) error {
 	//create catalog source
 	_, err := olmclient.CatalogSources(r.MarketNS).Create(ctx, catalogSource, metav1.CreateOptions{})
 	if err != nil {
-		log.Printf(color.InRed("[ERROR] Error creating catalog source: %s"), err.Error())
+		log.Printf(color.InRed(">>>> [ERROR] Error creating catalog source: %s"), err.Error())
 		return err
 	}
 

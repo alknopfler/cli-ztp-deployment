@@ -301,8 +301,9 @@ func (r *Registry) verifyMachineConfig(ctx context.Context, client dynamic.Inter
 
 func (r *Registry) verifyOCPReleaseMirror() error {
 	opt := adm.InfoOptions{
+		Images:          []string{r.RegistryRoute + "/" + r.RegistryOCPDestIndexNS + ":vv" + config.Ztp.Config.OcOCPTag},
 		IOStreams:       genericclioptions.IOStreams{In: os.Stdin, Out: os.Stdout, ErrOut: os.Stderr},
-		From:            r.RegistryRoute + "/" + r.RegistryOCPDestIndexNS + ":" + config.Ztp.Config.OcOCPTag,
+		From:            "",
 		FileDir:         "",
 		Output:          "",
 		ImageFor:        "",

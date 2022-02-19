@@ -34,7 +34,7 @@ func (r *Registry) RunMirrorOcp() error {
 	//Update Trust CA if not present (tekton  use case)
 	go func() {
 		if err := r.UpdateTrustCA(ctx, client); err != nil {
-			log.Printf(color.InRed("[ERROR] Updating the ca for the mirror ocp: %s"), err.Error())
+			log.Printf(color.InRed(">>>> [ERROR] Updating the ca for the mirror ocp: %s"), err.Error())
 			fatalErrors <- err
 		}
 		wg.Done()
@@ -44,7 +44,7 @@ func (r *Registry) RunMirrorOcp() error {
 	go func() {
 		regName, err := r.GetRegistryRouteName(ctx, ocpclient)
 		if err != nil {
-			log.Printf(color.InRed("[ERROR] getting the Route Name for the registry: %s"), err.Error())
+			log.Printf(color.InRed(">>>> [ERROR] getting the Route Name for the registry: %s"), err.Error())
 			fatalErrors <- err
 		}
 		r.RegistryRoute = regName
@@ -70,20 +70,20 @@ func (r *Registry) RunMirrorOcp() error {
 	//Login to the registry to grab the authfile with the new registry credentials
 	err := r.Login(ctx)
 	if err != nil {
-		log.Printf(color.InRed("[ERROR] login to registry: %s"), err.Error())
+		log.Printf(color.InRed(">>>> [ERROR] login to registry: %s"), err.Error())
 		return err
 	}
-	log.Println(color.InGreen("[INFO] login to registry successful"))
+	log.Println(color.InGreen(">>>> [INFO] login to registry successful"))
 
 	//Mirror ocp with a retry strategic to avoid errors
 	err = resources.Retry(4, 1*time.Minute, func() (err error) {
 		return r.mirrorOcp()
 	})
 	if err != nil {
-		log.Printf(color.InRed("[ERROR] mirroring the OCP image: %s"), err.Error())
+		log.Printf(color.InRed(">>>> [ERROR] mirroring the OCP image: %s"), err.Error())
 		return err
 	}
-	log.Println(color.InGreen("[INFO] mirroring the OCP image successful"))
+	log.Println(color.InGreen(">>>> [INFO] mirroring the OCP image successful"))
 	return nil
 }
 
