@@ -320,8 +320,5 @@ func (r *Registry) verifyOCPReleaseMirror() error {
 		SecurityOptions: manifest.SecurityOptions{RegistryConfig: r.PullSecretTempFile},
 	}
 
-	if opt.Validate() != nil {
-		return opt.Validate()
-	}
 	return opt.Run()
 }

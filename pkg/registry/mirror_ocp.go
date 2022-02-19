@@ -102,8 +102,6 @@ func (r *Registry) mirrorOcp() error {
 		ImageStream:     nil,
 		TargetFn:        nil,
 	}
-	if opt.Validate() != nil {
-		return opt.Validate()
-	}
+
 	return opt.Run()
 }
