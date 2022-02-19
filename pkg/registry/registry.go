@@ -46,6 +46,7 @@ type Registry struct {
 	RegistryDeploymentName      string
 	RegistryDataMountPath       string
 	RegistryCertMountPath       string
+	RegistryCertPath            string
 	RegistryAutoSecretMountPath string
 	RegistryConfMountPath       string
 	RegistryServiceName         string
@@ -87,6 +88,7 @@ func NewRegistry(mode string) *Registry {
 		RegistryPVCName:             "data-pvc",
 		RegistryDataMountPath:       "/var/lib/registry",
 		RegistryCertMountPath:       "/certs",
+		RegistryCertPath:            "/etc/pki/ca-trust/source/anchors",
 		RegistryAutoSecretMountPath: "/auth",
 		RegistryConfMountPath:       "/etc/docker/registry",
 		RegistryPVMode:              "Filesystem",
@@ -99,8 +101,9 @@ func NewRegistry(mode string) *Registry {
 func (r *Registry) Login(ctx context.Context) error {
 	args := []string{r.RegistryRoute}
 	loginOpts := a.LoginOptions{
-		AuthFile:      r.PullSecretTempFile,
-		CertDir:       r.RegistryPathCaCert,
+		AuthFile: r.PullSecretTempFile,
+		//CertDir:       r.RegistryPathCaCert,
+		CertDir:       r.RegistryCertPath,
 		Password:      r.RegistryPass,
 		Username:      r.RegistryUser,
 		StdinPassword: false,
