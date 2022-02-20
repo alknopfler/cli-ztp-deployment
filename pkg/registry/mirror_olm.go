@@ -5,6 +5,8 @@ import (
 	"github.com/TwiN/go-color"
 	"github.com/alknopfler/cli-ztp-deployment/config"
 	"github.com/alknopfler/cli-ztp-deployment/pkg/auth"
+	"github.com/containers/podman/v4/cmd/podman/registry"
+	"github.com/containers/podman/v4/pkg/domain/entities"
 	"github.com/operator-framework/operator-registry/pkg/containertools"
 	"github.com/operator-framework/operator-registry/pkg/lib/indexer"
 	"github.com/sirupsen/logrus"
@@ -81,16 +83,24 @@ func (r *Registry) RunMirrorOlm() error {
 		return err
 	}
 
-	errMirrorOlm := r.PruneCatalog()
-	if errMirrorOlm != nil {
-		log.Printf(color.InRed("[ERROR] Error pruning the olm catalog: %s"), errMirrorOlm.Error())
-		return errMirrorOlm
+	//Prune catalog
+	err = r.pruneCatalog()
+	if err != nil {
+		log.Printf(color.InRed(">>>> [ERROR] Error pruning the olm catalog: %s"), err.Error())
+		return err
+	}
+
+	//push the catalog pruned to registry
+	err = r.pushCatalog()
+	if err != nil {
+		log.Printf(color.InRed(">>>> [ERROR] Error pushing the olm catalog: %s"), err.Error())
+		return err
 	}
 
 	return nil
 }
 
-func (r *Registry) PruneCatalog() error {
+func (r *Registry) pruneCatalog() error {
 
 	//TODO For to parallelize the mirroring of the olm with goroutines
 	logger := logrus.WithFields(logrus.Fields{"packages": r.RegistrySrcPkg})
@@ -110,4 +120,27 @@ func (r *Registry) PruneCatalog() error {
 		return err
 	}
 	return nil
+}
+
+func (r *Registry) pushCatalog() error {
+	log.Println(color.InYellow("[INFO] Push the image to registry after pruning"))
+	pushOpt := entities.ImagePushOptions{
+		Authfile:          r.PullSecretTempFile,
+		CertDir:           "",
+		Compress:          false,
+		Username:          r.RegistryUser,
+		Password:          r.RegistryPass,
+		DigestFile:        "",
+		Format:            "",
+		Quiet:             false,
+		Rm:                false,
+		RemoveSignatures:  false,
+		SignaturePolicy:   "",
+		SignBy:            "",
+		SkipTLSVerify:     1,
+		Progress:          nil,
+		CompressionFormat: "",
+	}
+	return registry.ImageEngine().Push(registry.GetContext(), r.RegistryRoute+"/"+r.RegistryOLMDestIndexNS+":v"+config.Ztp.Config.OcOCPVersion, "", pushOpt)
+
 }
