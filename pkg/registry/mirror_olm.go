@@ -91,7 +91,7 @@ func (r *Registry) RunMirrorOlm() error {
 	}
 
 	//push the catalog pruned to registry
-	err = r.pushCatalog()
+	err = r.pushCatalog(ctx)
 	if err != nil {
 		log.Printf(color.InRed(">>>> [ERROR] Error pushing the olm catalog: %s"), err.Error())
 		return err
@@ -122,25 +122,16 @@ func (r *Registry) pruneCatalog() error {
 	return nil
 }
 
-func (r *Registry) pushCatalog() error {
+func (r *Registry) pushCatalog(ctx context.Context) error {
 	log.Println(color.InYellow("[INFO] Push the image to registry after pruning"))
 	pushOpt := entities.ImagePushOptions{
-		Authfile:          r.PullSecretTempFile,
-		CertDir:           "",
-		Compress:          false,
-		Username:          r.RegistryUser,
-		Password:          r.RegistryPass,
-		DigestFile:        "",
-		Format:            "",
-		Quiet:             false,
-		Rm:                false,
-		RemoveSignatures:  false,
-		SignaturePolicy:   "",
-		SignBy:            "",
-		SkipTLSVerify:     1,
-		Progress:          nil,
-		CompressionFormat: "",
+		Authfile:      r.PullSecretTempFile,
+		CertDir:       r.RegistryCertPath,
+		Compress:      false,
+		Username:      r.RegistryUser,
+		Password:      r.RegistryPass,
+		SkipTLSVerify: 1,
 	}
-	return registry.ImageEngine().Push(registry.GetContext(), r.RegistryRoute+"/"+r.RegistryOLMDestIndexNS+":v"+config.Ztp.Config.OcOCPVersion, "", pushOpt)
+	return registry.ImageEngine().Push(ctx, r.RegistryRoute+"/"+r.RegistryOLMDestIndexNS+":v"+config.Ztp.Config.OcOCPVersion, "", pushOpt)
 
 }
