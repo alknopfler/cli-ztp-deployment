@@ -96,4 +96,5 @@ ZTP_CONFIGFILE=./config.yaml ./ztpcli deploy registry --mode hub
 - preflights (verify) Done
 - HTTPD (deployment and verify) Done
 - registry (deployment and verify) Done
-- Mirror ocp 
+- Mirror ocp Done
+- Mirror olm WIP (Podman push)
