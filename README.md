@@ -1,6 +1,13 @@
 # cli-ztp-deployment
 
 # How to use it
+First of all, you will need the config.yaml (ztp_configfile) file with the information about your environment. You could take an example in this repo [/config.yaml](https://github.com/alknopfler/cli-ztp-deployment/blob/master/config.yaml)
+
+After that, you need to export the next environment variables:
+- KUBECONFIG: export KUBECONFIG=/path/to/kube-config.yaml
+- ZTP_CONFIGFILE: export ZTP_CONFIGFILE=/path/to/config.yaml
+
+
 ```
 Ztp is a command line to deploy ztp openshift clusters
 
@@ -25,7 +32,7 @@ Use "ztpcli [command] --help" for more information about a command.
 
 ```
 root:qct-d14u03 : ~/amorgant/cli-ztp-deployment {master}
-$ ZTP_CONFIGFILE=./config.yaml ./ztpcli verify -h
+$ ./ztpcli verify -h
 >>>> ConfigFile env is not empty. Reading file from this env
 Commands to verify things
 
@@ -52,7 +59,7 @@ ZTP_CONFIGFILE=./config.yaml ./ztpcli verify preflights
 # Deploy
 
 ```
-$ ZTP_CONFIGFILE=./config.yaml ./ztpcli deploy -h
+$ ./ztpcli deploy -h
 >>>> ConfigFile env is not empty. Reading file from this env
 Commands to deploy things
 
@@ -70,11 +77,11 @@ Use "ztpcli deploy [command] --help" for more information about a command.
 ```
 
 ```
-$ ZTP_CONFIGFILE=./config.yaml ./ztpcli deploy registry -h
+$ ./ztpcli deploy registry -h
 ```
 
 ```
-$ ZTP_CONFIGFILE=./config.yaml ./ztpcli deploy registry -h
+$ ./ztpcli deploy registry -h
 >>>> ConfigFile env is not empty. Reading file from this env
 Deploy new File Server running on the hub cluster based on mode (hub | spoke)
 
@@ -87,7 +94,7 @@ Flags:
 ```
 
 ```
-ZTP_CONFIGFILE=./config.yaml ./ztpcli deploy registry --mode hub
+./ztpcli deploy registry --mode hub
 ```
 
 
