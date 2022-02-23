@@ -161,6 +161,7 @@ func (r *Registry) UpdateTrustCA(ctx context.Context, client *kubernetes.Clients
 }
 
 func (r *Registry) CreateCatalogSource(ctx context.Context) error {
+	//TODO create if not exists
 	log.Println(color.InYellow(">>>> Creating catalog source."))
 	olmclient := auth.NewZTPAuth(config.GetKubeconfigFromMode(r.Mode)).GetOlmAuth()
 

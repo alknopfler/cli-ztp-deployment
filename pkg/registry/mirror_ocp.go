@@ -93,14 +93,16 @@ func (r *Registry) mirrorOcp() error {
 		SecurityOptions: manifest.SecurityOptions{
 			RegistryConfig: r.PullSecretTempFile,
 		},
-		ParallelOptions: manifest.ParallelOptions{},
-		From:            r.RegistryOCPReleaseImage,
-		To:              r.RegistryRoute + "/" + r.RegistryOCPDestIndexNS,
-		ToRelease:       r.RegistryRoute + "/" + r.RegistryOCPDestIndexNS + ":" + config.Ztp.Config.OcOCPTag,
-		SkipRelease:     false,
-		DryRun:          false,
-		ImageStream:     nil,
-		TargetFn:        nil,
+		ParallelOptions: manifest.ParallelOptions{
+			MaxPerRegistry: 100,
+		},
+		From:        r.RegistryOCPReleaseImage,
+		To:          r.RegistryRoute + "/" + r.RegistryOCPDestIndexNS,
+		ToRelease:   r.RegistryRoute + "/" + r.RegistryOCPDestIndexNS + ":" + config.Ztp.Config.OcOCPTag,
+		SkipRelease: false,
+		DryRun:      false,
+		ImageStream: nil,
+		TargetFn:    nil,
 	}
 
 	return opt.Run()
