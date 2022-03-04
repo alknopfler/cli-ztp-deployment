@@ -96,6 +96,7 @@ func (r *Registry) RunMirrorOlm() error {
 	err = resources.Retry(4, 1*time.Minute, func() (err error) {
 		return r.pruneCatalog()
 	})
+	err = r.pruneCatalog()
 	if err != nil {
 		log.Printf(color.InRed(">>>> [ERROR] Error Pruning the OLM the catalog: %s"), err.Error())
 		return err
@@ -171,7 +172,6 @@ func (r *Registry) mirrorCatalog() error {
 		IOStreams:                 genericclioptions.IOStreams{In: os.Stdin, Out: os.Stdout, ErrOut: os.Stderr},
 		DryRun:                    false,
 		ManifestOnly:              false,
-		DatabasePath:              "",
 		FromFileDir:               "",
 		FileDir:                   "",
 		IcspScope:                 "",
@@ -186,8 +186,8 @@ func (r *Registry) mirrorCatalog() error {
 			Type: "",
 			Ref: reference.DockerImageReference{
 				Registry:  r.RegistryRoute,
-				Namespace: r.RegistryOLMDestIndexNS,
-				Name:      "",
+				Namespace: "olm",
+				Name:      "redhat-operator-index",
 				Tag:       "v" + config.Ztp.Config.OcOCPVersion,
 				ID:        "",
 			},
@@ -196,13 +196,12 @@ func (r *Registry) mirrorCatalog() error {
 			Type: "",
 			Ref: reference.DockerImageReference{
 				Registry:  r.RegistryRoute,
-				Namespace: r.RegistryOLMDestIndexNS,
-				Name:      "",
+				Namespace: "olm",
+				Name:      "redhat-operator-index",
 				Tag:       "",
 				ID:        "",
 			},
 		},
 	}
-
 	return opt.Run()
 }
