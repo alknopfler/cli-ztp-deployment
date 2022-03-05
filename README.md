@@ -100,8 +100,15 @@ Flags:
 
 
 ## Done by now
-- preflights (verify) Done
-- HTTPD (deployment and verify) Done
-- registry (deployment and verify) Done
-- Mirror ocp Done
-- Mirror olm WIP (Podman push)
+- preflights (verify) **[Done]**
+- HTTPD (deployment and verify) **[Done]**
+- registry (deployment and verify) **[Done]**
+- Mirror ocp **[Done]**
+- Mirror olm WIP **[Done]**
+
+
+- Verify ocp y olm mirror **[TODO]**
+- Update pull secret **[TODO]**
+
+
+- Deploy ACM **[WIP]**

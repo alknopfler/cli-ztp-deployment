@@ -16,6 +16,7 @@ func NewVerify() *cobra.Command {
 	c.AddCommand(NewVerifyRegistry())
 	c.AddCommand(NewVerifyMirrorOcp())
 	c.AddCommand(NewVerifyMirrorOlm())
+	c.AddCommand(NewVerifyACM())
 
 	return c
 }
