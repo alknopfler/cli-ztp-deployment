@@ -254,7 +254,7 @@ func (r *Registry) createDeployment(ctx context.Context, client *kubernetes.Clie
 						Containers: []coreV1.Container{
 							{
 								Name:  r.RegistryDeploymentName,
-								Image: r.RegistryExtraImages,
+								Image: r.RegistryExtraImages[0],
 								Ports: []coreV1.ContainerPort{
 									{
 										Name:          "registry",

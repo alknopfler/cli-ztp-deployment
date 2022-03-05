@@ -36,7 +36,7 @@ type Registry struct {
 	RegistryOLMSourceIndex      string
 	RegistrySrcPkg              string
 	RegistrySrcPkgFormatted     []string
-	RegistryExtraImages         string
+	RegistryExtraImages         []string
 	OcDisCatalog                string
 	OcpReleaseFull              string
 	RegistryUser                string
@@ -77,9 +77,9 @@ func NewRegistry(mode string) *Registry {
 		RegistryOLMSourceIndex:      "registry.redhat.io/redhat/redhat-operator-index:v" + config.Ztp.Config.OcOCPVersion,
 		RegistrySrcPkg:              "kubernetes-nmstate-operator,metallb-operator,ocs-operator,local-storage-operator,advanced-cluster-management",
 		RegistrySrcPkgFormatted:     []string{"kubernetes-nmstate-operator", "metallb-operator ocs-operator", "local-storage-operator", "advanced-cluster-management"},
-		RegistryExtraImages:         "quay.io/jparrill/registry:2",
+		RegistryExtraImages:         []string{"quay.io/jparrill/registry:3", "registry.access.redhat.com/rhscl/httpd-24-rhel7:latest", "quay.io/ztpfw/ui:latest"},
 		RegistryUser:                "dummy",
-		RegistryPass:                "dummy",
+		RegistryPass:                "dummy123",
 		RegistrySecretName:          "auth",
 		RegistryConfigMapName:       "registry-conf",
 		RegistryDeploymentName:      "kubeframe-registry",
