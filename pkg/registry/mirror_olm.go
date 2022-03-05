@@ -8,13 +8,11 @@ import (
 	"github.com/alknopfler/cli-ztp-deployment/config"
 	"github.com/alknopfler/cli-ztp-deployment/pkg/auth"
 	"github.com/alknopfler/cli-ztp-deployment/pkg/resources"
-	"github.com/openshift/library-go/pkg/image/reference"
 	adm "github.com/openshift/oc/pkg/cli/admin/catalog"
-	"github.com/openshift/oc/pkg/cli/image/imagesource"
-	"github.com/openshift/oc/pkg/cli/image/manifest"
 	"github.com/operator-framework/operator-registry/pkg/containertools"
 	"github.com/operator-framework/operator-registry/pkg/lib/indexer"
 	"github.com/sirupsen/logrus"
+	"github.com/spf13/cobra"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 	"log"
 	"os"
@@ -96,7 +94,6 @@ func (r *Registry) RunMirrorOlm() error {
 	err = resources.Retry(4, 1*time.Minute, func() (err error) {
 		return r.pruneCatalog()
 	})
-	err = r.pruneCatalog()
 	if err != nil {
 		log.Printf(color.InRed(">>>> [ERROR] Error Pruning the OLM the catalog: %s"), err.Error())
 		return err
@@ -151,7 +148,7 @@ func (r *Registry) pruneCatalog() error {
 func (r *Registry) pushCatalog() error {
 	//TODO solve issue with podman https://github.com/alknopfler/cli-ztp-deployment/issues/1#issue-1147187533
 	//Workarround using exec to push the catalog
-	log.Println(color.InGreen(" >>>> [INFO] Doing: podman push " + r.RegistryRoute + "/" + r.RegistryOLMDestIndexNS + ":v" + config.Ztp.Config.OcOCPVersion + " --authfile " + r.PullSecretTempFile))
+	log.Println(color.InYellow(" >>>> [INFO] Doing: podman push " + r.RegistryRoute + "/" + r.RegistryOLMDestIndexNS + ":v" + config.Ztp.Config.OcOCPVersion + " --authfile " + r.PullSecretTempFile))
 	cmd := exec.Command("podman", "push", r.RegistryRoute+"/"+r.RegistryOLMDestIndexNS+":v"+config.Ztp.Config.OcOCPVersion, "--authfile", r.PullSecretTempFile)
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
@@ -167,41 +164,34 @@ func (r *Registry) pushCatalog() error {
 }
 
 func (r *Registry) mirrorCatalog() error {
-	opt := adm.MirrorCatalogOptions{
-		IndexImageMirrorerOptions: nil,
-		IOStreams:                 genericclioptions.IOStreams{In: os.Stdin, Out: os.Stdout, ErrOut: os.Stderr},
-		DryRun:                    false,
-		ManifestOnly:              false,
-		FromFileDir:               "",
-		FileDir:                   "",
-		IcspScope:                 "",
-		SecurityOptions: manifest.SecurityOptions{
-			RegistryConfig: r.PullSecretTempFile,
-		},
-		FilterOptions: manifest.FilterOptions{},
-		ParallelOptions: manifest.ParallelOptions{
-			MaxPerRegistry: 100,
-		},
-		SourceRef: imagesource.TypedImageReference{
-			Type: "",
-			Ref: reference.DockerImageReference{
-				Registry:  r.RegistryRoute,
-				Namespace: "olm",
-				Name:      "redhat-operator-index",
-				Tag:       "v" + config.Ztp.Config.OcOCPVersion,
-				ID:        "",
-			},
-		},
-		DestRef: imagesource.TypedImageReference{
-			Type: "",
-			Ref: reference.DockerImageReference{
-				Registry:  r.RegistryRoute,
-				Namespace: "olm",
-				Name:      "redhat-operator-index",
-				Tag:       "",
-				ID:        "",
-			},
-		},
+	log.Println(color.InYellow("[INFO] Creating new Mirror Catalog"))
+	o := adm.NewMirrorCatalogOptions(genericclioptions.IOStreams{In: os.Stdin, Out: os.Stdout, ErrOut: os.Stderr})
+	o.SecurityOptions.RegistryConfig = r.PullSecretTempFile
+	o.SecurityOptions.SkipVerification = true
+	o.ParallelOptions.MaxPerRegistry = 100
+	o.ManifestDir = ""
+	o.IndexPath = ""
+	o.DryRun = false
+	o.ManifestOnly = false
+	o.FileDir = ""
+	o.FromFileDir = ""
+	o.MaxPathComponents = 2
+	o.IcspScope = "repository"
+	o.MaxICSPSize = 250000
+	cmd := cobra.Command{}
+
+	log.Println(color.InYellow("[INFO] Generating options source and destionation for the mirror catalog"))
+	err := o.Complete(&cmd, []string{r.RegistryRoute + "/" + r.RegistryOLMDestIndexNS + ":v" + config.Ztp.Config.OcOCPVersion, r.RegistryRoute + "/" + r.RegistryOLMDestIndexNS})
+	if err != nil {
+		log.Println(color.InRed("[ERROR] Error generating options source and destination for the mirror catalog"))
+		return err
 	}
-	return opt.Run()
+	log.Println(color.InYellow("[INFO] Doing the mirror catalog"))
+	err = o.Run()
+	if err != nil {
+		log.Println(color.InRed("[ERROR] Error doing the mirror catalog"))
+		return err
+	}
+	log.Println(color.InGreen("[INFO] Mirror Catalog done successfully"))
+	return nil
 }
