@@ -288,13 +288,13 @@ func (r *Registry) verifyMCP(ctx context.Context, client dynamic.Interface) erro
 func (r *Registry) verifyMachineConfig(ctx context.Context, client dynamic.Interface) error {
 	mcp, err := resources.NewGenericGet(ctx, client, "machineconfiguration.openshift.io", "v1", "machineconfigs", "", "update-localregistry-ca-certs", "").GetResourceDynamically()
 	if err != nil {
-		log.Printf(color.InRed("[ERROR] Error getting MachineConfig info: %s"), err.Error())
+		log.Printf(color.InYellow("Error getting MachineConfig info: %s, creating it now!"), err.Error())
 		return err
 	}
 
 	if mcp.Object == nil {
-		log.Println(color.InRed("[ERROR] MachineConfig not found or applied"))
-		return errors.New("[ERROR] MachineConfig not found or applied")
+		log.Println(color.InYellow("MachineConfig not found or applied, creating it now! "))
+		return errors.New("MachineConfig not found or applied, creating it now! ")
 	}
 	return nil
 }

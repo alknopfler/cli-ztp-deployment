@@ -72,7 +72,7 @@ func (p *Preflight) RunPreflights() error {
 		wg.Done()
 	}()
 	go func() {
-		err := p.verifyCommand("podman2")
+		err := p.verifyCommand("podman")
 		if err != nil {
 			fatalError <- err
 		}
