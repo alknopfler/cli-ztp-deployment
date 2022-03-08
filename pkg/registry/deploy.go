@@ -59,7 +59,7 @@ func (r *Registry) RunDeployRegistry() error {
 	go func() {
 		err := r.createDeployment(ctx, client)
 		if err != nil {
-			log.Fatalf("Error creating deployment: %s", err.Error())
+			log.Printf("Error creating deployment: %s", err.Error())
 			fatalErrors <- err
 		}
 		wg.Done()
@@ -68,7 +68,7 @@ func (r *Registry) RunDeployRegistry() error {
 	go func() {
 		err := r.createService(ctx, client)
 		if err != nil {
-			log.Fatalf("Error creating service: %s", err.Error())
+			log.Printf("Error creating service: %s", err.Error())
 			fatalErrors <- err
 		}
 		wg.Done()
@@ -76,7 +76,7 @@ func (r *Registry) RunDeployRegistry() error {
 	go func() {
 		err := r.createRoute(ctx, *ocpclient)
 		if err != nil {
-			log.Fatalf("Error creating route: %s", err.Error())
+			log.Printf("Error creating route: %s", err.Error())
 			fatalErrors <- err
 		}
 		wg.Done()
@@ -84,7 +84,7 @@ func (r *Registry) RunDeployRegistry() error {
 	go func() {
 		err := r.createPVC(ctx, *client)
 		if err != nil {
-			log.Fatalf("Error creating PVC: %s", err.Error())
+			log.Printf("Error creating PVC: %s", err.Error())
 			fatalErrors <- err
 		}
 		wg.Done()

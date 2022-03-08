@@ -5,6 +5,7 @@ import (
 )
 
 func (a *ACM) RunDeployACM() error {
+
 	o := operator.NewOperator()
 	err := o.InstallOperator(true, false, a.Namespace, a.DefaultChannel, []string{a.Name})
 	if err != nil {

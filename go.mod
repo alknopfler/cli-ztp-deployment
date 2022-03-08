@@ -9,7 +9,7 @@ require (
 	github.com/containers/image/v5 v5.16.0
 	github.com/foomo/htpasswd v0.0.0-20200116085101-e3a90e78da9c
 	github.com/itchyny/gojq v0.12.6
-	github.com/karmab/tasty v0.8.1
+	github.com/karmab/tasty v0.8.2
 	github.com/openshift/api v0.0.0-20220124143425-d74727069f6f
 	github.com/openshift/client-go v0.0.0-20210831095141-e19a065e79f7
 	github.com/openshift/oc v0.0.0-alpha.0.0.20220216050455-5035cc32ec97
